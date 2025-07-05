@@ -1,4 +1,5 @@
 local discovery = require "main.network_discovery"
+local room_server = require "main.room_server"
 
 function init(self)
     msg.post(".", "acquire_input_focus")
@@ -7,11 +8,13 @@ function init(self)
     print("▶▶▶ LocalNetTest 起動成功！")
     discovery.listen()
     discovery.broadcast_hello()
+    room_server.start(60000)
 end
 
 -- 每幀都呼叫 receive() 來檢查有沒有新訊息
 function update(self, dt)
     discovery.receive()
+    room_server.update()
 end
 
 function on_input(self, action_id, action)

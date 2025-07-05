@@ -3,7 +3,11 @@ local socket = require "socket"
 local json   = require "json"
 local SYS    = sys.get_sys_info()
 
+-- Cache local IP so we can ignore multicast loopback messages
+local LOCAL_IP = socket.dns.toip(socket.dns.gethostname()) or "127.0.0.1"
+
 local M = {}
+M.local_ip = LOCAL_IP
 
 --- 建立並設定好用來收 Multicast 的 UDP socket
 function M.listen()
@@ -41,9 +45,9 @@ end
 function M.receive()
     if not M.udp then return end
     local data, ip, port = M.udp:receivefrom()
-    if data then
+    if data and ip ~= LOCAL_IP then
         local ok, t = pcall(json.decode, data)
-        if ok and t.protocol == "localsend" then
+        if ok and t.protocol == "localsend" and t.device_id then
             print(string.format(
               "👍 Received HELLO from %s:%d → device_id=%s, model=%s",
               ip, port, t.device_id or "-", t.model or "-"
