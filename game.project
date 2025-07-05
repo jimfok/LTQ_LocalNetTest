@@ -1,5 +1,5 @@
 [project]
-title = LTQ_LocalNetTest1
+title = LTQ_LocalNetTest
 
 [bootstrap]
 main_collection = /main/main.collectionc
