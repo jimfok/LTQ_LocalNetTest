@@ -22,4 +22,4 @@ Happy Defolding!
 
 ### Local network discovery
 
-The project now contains two scenes (`main` and `lobby`) and a small network manager.  `main/network_manager.lua` handles the UDP broadcast and optional TCP server used from the lobby GUI scripts.  The first scene only shows a **Start** button which loads the lobby scene via a collection proxy.
+The file `main/network_discovery.lua` sets up a multicast UDP listener and broadcasts a `HELLO` message with the device ID and model. This allows instances of the game on the same network to announce themselves and detect others. `main/main.script` shows how the module is initialized and used each frame.
