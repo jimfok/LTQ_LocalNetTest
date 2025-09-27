@@ -44,6 +44,7 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 - Run `./scripts/test.sh` to execute the full spec suite; pass extra arguments (for example, `./scripts/test.sh spec/network/discovery_spec.lua`) for focused runs without reconfiguring your shell.
 - Use `busted spec/network/discovery_spec.lua` (or the room server spec) for focused runs while iterating.
 - Use `./scripts/build.sh` to invoke `tools/bob.jar` with Java 21+, or pass custom flags such as `./scripts/build.sh --archive --platform armv7-android bundle`.
+- Use `./scripts/bob-smoke.sh` to exercise Bob's `resolve`, `build`, and `bundle` commands in sequence (pass `--platform` to target a different runtime).
 - Download Bob separately from the Defold editor (`Help → Download Bob`) and place it at `tools/bob.jar`; the file is `.gitignore`d so each developer/CI runner keeps a local copy.
 - The project vendors [dkjson](https://github.com/LuaDist/dkjson) as `json.lua` (MIT) to keep `require "json"` working for both Busted and Bob builds without external Lua modules.
 - Update `game.project` if you need unique network settings per build (for example, change `[network] discovery_port`).
