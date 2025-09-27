@@ -31,3 +31,10 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 - Behavioural specs reside in `spec/network` and assume the [Busted](https://lunarmodules.github.io/busted/) runner (`luarocks install busted` then `busted spec`).
 - Specs rely on dependency injection; production code uses Defold's `socket`, `json`, and `sys` while tests stub these interfaces.
 - Override the UDP port via `game.project` (add `[network]` → `discovery_port = 53317`, for example) to run multiple instances on the same machine.
+
+## Development workflow
+
+- Install LuaRocks + Busted for LuaJIT: `luarocks --lua-version=5.1 --lua-interpreter=luajit install busted --local`.
+- Ensure `~/.luarocks/bin` is on your `PATH`, then run `busted spec` before committing changes.
+- Use `busted spec/network/discovery_spec.lua` (or the room server spec) for focused runs while iterating.
+- Update `game.project` if you need unique network settings per build (for example, change `[network] discovery_port`).
