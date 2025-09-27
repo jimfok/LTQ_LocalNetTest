@@ -1,3 +1,5 @@
+# Hard requirement: no files >=100 MB may be committed (Git LFS is not enabled);
+# add any large generated artifacts here instead of versioning them.
 /.editor_settings
 /.internal
 /build
