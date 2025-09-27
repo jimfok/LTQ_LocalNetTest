@@ -35,6 +35,8 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 ## Development workflow
 
 - Install LuaRocks + Busted for LuaJIT: `luarocks --lua-version=5.1 --lua-interpreter=luajit install busted --local`.
-- Ensure `~/.luarocks/bin` is on your `PATH`, then run `busted spec` before committing changes.
+- Run `./scripts/test.sh` to execute the full spec suite; pass extra arguments (for example, `./scripts/test.sh spec/network/discovery_spec.lua`) for focused runs without reconfiguring your shell.
 - Use `busted spec/network/discovery_spec.lua` (or the room server spec) for focused runs while iterating.
+- Use `./scripts/build.sh` to invoke `tools/bob.jar` with Java 21+, or pass custom flags such as `./scripts/build.sh --archive --platform armv7-android bundle`.
+- The project vendors [dkjson](https://github.com/LuaDist/dkjson) as `json.lua` (MIT) to keep `require "json"` working for both Busted and Bob builds without external Lua modules.
 - Update `game.project` if you need unique network settings per build (for example, change `[network] discovery_port`).
