@@ -1,23 +1,41 @@
-local discovery = require "main.network_discovery"
+local Discovery = require "src.network.discovery"
 
 function init(self)
     msg.post(".", "acquire_input_focus")
     msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
 
     print("▶▶▶ LocalNetTest 起動成功！")
-    discovery.listen()
-    discovery.broadcast_hello()
+    self.discovery = Discovery.new()
+    local ok, err = pcall(self.discovery.listen, self.discovery)
+    if not ok then
+        print("⚠️ 無法啟動網路探索:", tostring(err))
+        print("⚠️ 請確認沒有其他進程佔用 UDP 埠 53316 (例如: sudo lsof -nP -iUDP:53316)")
+        self.discovery = nil
+        return
+    end
+    self.discovery:broadcast_hello()
 end
 
 -- 每幀都呼叫 receive() 來檢查有沒有新訊息
 function update(self, dt)
-    discovery.receive()
+    if self.discovery then
+        self.discovery:receive()
+    end
+end
+
+function final(self)
+    if self.discovery then
+        self.discovery:close()
+        self.discovery = nil
+    end
 end
 
 function on_input(self, action_id, action)
     if action_id == hash("touch") and action.pressed then
         print("Touch!")
         -- 範例：點一下就再廣播一次 HELLO
-        discovery.broadcast_hello()
+        if self.discovery then
+            self.discovery:broadcast_hello()
+        end
     end
 end
