@@ -30,7 +30,13 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 - `main/main.script` creates a `Discovery` instance, which exposes `listen`, `broadcast_hello`, `receive`, and `close` instance methods.
 - Behavioural specs reside in `spec/network` and assume the [Busted](https://lunarmodules.github.io/busted/) runner (`luarocks install busted` then `busted spec`).
 - Specs rely on dependency injection; production code uses Defold's `socket`, `json`, and `sys` while tests stub these interfaces.
+- Shared doubles live under `spec/support` (for example, `spec/support/network_context.lua`) so new specs can require an existing context instead of rewriting stubs.
 - Override the UDP port via `game.project` (add `[network]` → `discovery_port = 53317`, for example) to run multiple instances on the same machine.
+
+### Tests vs specs
+
+- Prefer authoring unit and behaviour specs under `spec/`; the `tests/` directory is a placeholder for future integration harnesses and should remain empty unless you are wiring alternative runners.
+- Run the full networking spec suite with `./scripts/test-network.sh`, or pass individual files/dirs to `./scripts/test.sh` for focused runs.
 
 ## Development workflow
 
