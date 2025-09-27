@@ -1,41 +1,394 @@
-local Discovery = require "src.network.discovery"
+local UiModel = require "src.ui.model"
+local json = require "json"
+local socket = require "socket"
+local dns = socket.dns
 
-function init(self)
-    msg.post(".", "acquire_input_focus")
-    msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
+local UI_URL = msg.url("main:/go#ui")
 
-    print("▶▶▶ LocalNetTest 起動成功！")
-    self.discovery = Discovery.new()
-    local ok, err = pcall(self.discovery.listen, self.discovery)
-    if not ok then
-        print("⚠️ 無法啟動網路探索:", tostring(err))
-        print("⚠️ 請確認沒有其他進程佔用 UDP 埠 53316 (例如: sudo lsof -nP -iUDP:53316)")
-        self.discovery = nil
-        return
-    end
-    self.discovery:broadcast_hello()
+math.randomseed(os.time())
+
+local STATE_SPLASH = "splash"
+local STATE_MENU = "menu"
+local STATE_CREATE = "create"
+local STATE_JOIN = "join"
+
+local STATE_HASHES = {
+    [STATE_SPLASH] = hash(STATE_SPLASH),
+    [STATE_MENU] = hash(STATE_MENU),
+    [STATE_CREATE] = hash(STATE_CREATE),
+    [STATE_JOIN] = hash(STATE_JOIN),
+}
+
+local HASH_UI_ACTION = hash("ui_action")
+local HASH_STATE_CHANGED = hash("state_changed")
+local HASH_LOGS_UPDATED = hash("logs_updated")
+local HASH_STATUS_UPDATED = hash("status_updated")
+local HASH_PEER_ID_CHANGED = hash("peer_id_changed")
+
+local ACTION_SKIP_SPLASH = hash("skip_splash")
+local ACTION_CREATE_ROOM = hash("create_room")
+local ACTION_JOIN_ROOM = hash("join_room")
+local ACTION_BACK_TO_MENU = hash("back_to_menu")
+local ACTION_SEND_PING = hash("send_ping")
+
+local UDP_PORT = 53317
+local BROADCAST_ADDR = "255.255.255.255"
+local MAX_POLL = 8
+local SPLASH_DURATION = 1.5
+
+local function state_hash(state)
+    return STATE_HASHES[state]
 end
 
--- 每幀都呼叫 receive() 來檢查有沒有新訊息
+local function determine_local_ip()
+    if dns and dns.gethostname and dns.toip then
+        local hostname = dns.gethostname()
+        if hostname then
+            local ip = dns.toip(hostname)
+            if ip and ip ~= "" then
+                return ip
+            end
+        end
+    end
+    return "127.0.0.1"
+end
+
+local function guess_broadcast(ip)
+    local a, b, c = ip:match("^(%d+)%.(%d+)%.(%d+)%.%d+$")
+    a, b, c = tonumber(a), tonumber(b), tonumber(c)
+    if not (a and b and c) then
+        return BROADCAST_ADDR
+    end
+    if a == 127 or a >= 224 then
+        return BROADCAST_ADDR
+    end
+    return string.format("%d.%d.%d.255", a, b, c)
+end
+
+local function set_status(channel, text)
+    UiModel.set_status(channel, text)
+    local state = state_hash(channel)
+    if state then
+        msg.post(UI_URL, HASH_STATUS_UPDATED, { state = state })
+    end
+end
+
+local function push_log(channel, direction, peer_label, message)
+    local prefix = "--"
+    if direction == "in" then
+        prefix = "<-"
+    elseif direction == "out" then
+        prefix = "->"
+    end
+    local timestamp = os.date("%H:%M:%S")
+    local line = string.format("[%s] %s %s %s", timestamp, prefix, peer_label or "-", message or "")
+    UiModel.append_log(channel, line)
+    local state = state_hash(channel)
+    if state then
+        msg.post(UI_URL, HASH_LOGS_UPDATED, { state = state })
+    end
+end
+
+local function format_peer(peer_id, ip, port)
+    local has_id = peer_id and peer_id ~= ""
+    local has_endpoint = ip and port
+    if has_id and has_endpoint then
+        return string.format("%s (%s:%s)", peer_id, ip, port)
+    end
+    if has_id then
+        return peer_id
+    end
+    if has_endpoint then
+        return string.format("%s:%s", ip, port)
+    end
+    return "unknown"
+end
+
+local function clear_logs(channel)
+    UiModel.clear_logs(channel)
+    local state = state_hash(channel)
+    if state then
+        msg.post(UI_URL, HASH_LOGS_UPDATED, { state = state })
+    end
+end
+
+local function stop_server(self)
+    if self.server_udp then
+        self.server_udp:close()
+        self.server_udp = nil
+    end
+end
+
+local function stop_client(self)
+    if self.client_udp then
+        self.client_udp:close()
+        self.client_udp = nil
+    end
+end
+
+local function start_server(self)
+    clear_logs(STATE_CREATE)
+    stop_server(self)
+    local udp, err = socket.udp()
+    if not udp then
+        local msg = string.format("Failed to open UDP socket: %s", tostring(err))
+        print("[WARN] " .. msg)
+        set_status(STATE_CREATE, msg)
+        return
+    end
+    udp:settimeout(0)
+    udp:setoption("reuseaddr", true)
+    local ok, bind_err = udp:setsockname("*", UDP_PORT)
+    if not ok then
+        udp:close()
+        local msg = string.format("Unable to bind UDP port %d: %s", UDP_PORT, tostring(bind_err))
+        print("[WARN] " .. msg)
+        set_status(STATE_CREATE, msg)
+        return
+    end
+    udp:setoption("broadcast", true)
+    self.server_udp = udp
+    local status
+    if self.local_ip then
+        status = string.format("Hosting on %s:%d", self.local_ip, UDP_PORT)
+    else
+        status = string.format("Listening on UDP %d", UDP_PORT)
+    end
+    set_status(STATE_CREATE, status)
+    push_log(STATE_CREATE, "info", "system", status)
+end
+
+local function start_client(self)
+    clear_logs(STATE_JOIN)
+    stop_client(self)
+    local udp, err = socket.udp()
+    if not udp then
+        local msg = string.format("Failed to open UDP socket: %s", tostring(err))
+        print("[WARN] " .. msg)
+        set_status(STATE_JOIN, msg)
+        return
+    end
+    udp:settimeout(0)
+    udp:setoption("reuseaddr", true)
+    udp:setoption("broadcast", true)
+    local ok, bind_err = udp:setsockname("*", 0)
+    if not ok then
+        udp:close()
+        local msg = string.format("Unable to bind client UDP socket: %s", tostring(bind_err))
+        print("[WARN] " .. msg)
+        set_status(STATE_JOIN, msg)
+        return
+    end
+    self.client_udp = udp
+    local _, local_port = udp:getsockname()
+    local status
+    if self.broadcast_addr then
+        status = string.format("Client ready on UDP %s → broadcast %s", local_port, self.broadcast_addr)
+    else
+        status = string.format("Listening locally on UDP %s", local_port)
+    end
+    set_status(STATE_JOIN, status)
+    UiModel.set_broadcast_ip(self.broadcast_addr)
+    msg.post(UI_URL, HASH_PEER_ID_CHANGED, {})
+end
+
+local function send_ping(self)
+    if not self.client_udp then
+        push_log(STATE_JOIN, "info", "system", "Ping skipped: client not ready")
+        return
+    end
+    local payload = json.encode({
+        type = "ping",
+        peer_id = self.peer_id,
+        timestamp = socket.gettime(),
+    })
+    local targets = {}
+    if self.broadcast_addr and self.broadcast_addr ~= BROADCAST_ADDR then
+        targets[#targets + 1] = self.broadcast_addr
+    end
+    targets[#targets + 1] = BROADCAST_ADDR
+    local sent_any = false
+    for _, addr in ipairs(targets) do
+        local bytes, err = self.client_udp:sendto(payload, addr, UDP_PORT)
+        local target = string.format("%s:%d", addr, UDP_PORT)
+        if not bytes then
+            push_log(STATE_JOIN, "info", target, "Failed to send ping: " .. tostring(err))
+        else
+            push_log(STATE_JOIN, "out", target, "ping")
+            sent_any = true
+            break
+        end
+    end
+    if not sent_any then
+        set_status(STATE_JOIN, "Unable to broadcast ping. Check network configuration.")
+    end
+end
+
+local function poll_server(self)
+    local udp = self.server_udp
+    if not udp then return end
+    for _ = 1, MAX_POLL do
+        local data, ip, port = udp:receivefrom()
+        if not data then break end
+        local peer_id
+        local message_text = data
+        local ok, payload = pcall(json.decode, data)
+        if ok and type(payload) == "table" then
+            peer_id = payload.peer_id
+            if payload.type then
+                message_text = payload.type
+                if payload.message then
+                    message_text = message_text .. ": " .. tostring(payload.message)
+                end
+            end
+        end
+        local peer_label = format_peer(peer_id, ip, port)
+        push_log(STATE_CREATE, "in", peer_label, message_text)
+        if ok and type(payload) == "table" and payload.type == "ping" then
+            local response = json.encode({
+                type = "pong",
+                peer_id = self.peer_id,
+                port = UDP_PORT,
+                timestamp = socket.gettime(),
+            })
+            local sent, err = udp:sendto(response, ip, port)
+            if not sent then
+                push_log(STATE_CREATE, "info", peer_label, "Failed to send pong: " .. tostring(err))
+            else
+                push_log(STATE_CREATE, "out", peer_label, "pong")
+            end
+        end
+    end
+end
+
+local function poll_client(self)
+    local udp = self.client_udp
+    if not udp then return end
+    for _ = 1, MAX_POLL do
+        local data, ip, port = udp:receivefrom()
+        if not data then break end
+        local peer_id
+        local message_text = data
+        local ok, payload = pcall(json.decode, data)
+        if ok and type(payload) == "table" then
+            peer_id = payload.peer_id
+            if payload.type then
+                message_text = payload.type
+                if payload.message then
+                    message_text = message_text .. ": " .. tostring(payload.message)
+                end
+            end
+        end
+        local peer_label = format_peer(peer_id, ip, port)
+        push_log(STATE_JOIN, "in", peer_label, message_text)
+    end
+end
+
+local function exit_state(self, state)
+    if state == STATE_CREATE then
+        stop_server(self)
+        set_status(STATE_CREATE, "Server stopped. Tap Create Room to host again.")
+    elseif state == STATE_JOIN then
+        stop_client(self)
+        set_status(STATE_JOIN, "Stopped listening. Tap Join Room to search again.")
+    end
+end
+
+local function enter_state(self, state)
+    if state == STATE_CREATE then
+        start_server(self)
+    elseif state == STATE_JOIN then
+        start_client(self)
+        send_ping(self)
+    end
+end
+
+local function change_state(self, state)
+    if self.state == state then return end
+    exit_state(self, self.state)
+    self.state = state
+    UiModel.set_state(state)
+    msg.post(UI_URL, HASH_STATE_CHANGED, { state = state_hash(state) })
+    enter_state(self, state)
+end
+
+function init(self)
+    msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
+
+    self.state = STATE_SPLASH
+    self.splash_elapsed = 0
+    self.server_udp = nil
+    self.client_udp = nil
+    self.local_ip = determine_local_ip()
+    self.broadcast_addr = guess_broadcast(self.local_ip)
+
+    local sys_info = sys.get_sys_info()
+    local peer_id = nil
+    if sys_info and sys_info.device_id and sys_info.device_id ~= "" then
+        peer_id = sys_info.device_id
+    end
+    if not peer_id then
+        peer_id = string.format("peer-%06d", math.random(0, 999999))
+    end
+    self.peer_id = peer_id
+
+    UiModel.set_peer_id(self.peer_id)
+    UiModel.set_peer_ip(self.local_ip)
+    UiModel.set_broadcast_ip(self.broadcast_addr)
+    UiModel.set_state(self.state)
+    clear_logs(STATE_CREATE)
+    clear_logs(STATE_JOIN)
+    local host_hint = self.local_ip and string.format("Idle. Tap Create Room to host (%s:%d).", self.local_ip, UDP_PORT)
+        or "Idle. Tap Create Room to host."
+    set_status(STATE_CREATE, host_hint)
+    local join_hint
+    if self.broadcast_addr and self.broadcast_addr ~= BROADCAST_ADDR then
+        join_hint = string.format("Idle. Tap Join Room to search (broadcast %s).", self.broadcast_addr)
+    else
+        join_hint = "Idle. Tap Join Room to search."
+    end
+    set_status(STATE_JOIN, join_hint)
+
+    msg.post(UI_URL, HASH_PEER_ID_CHANGED, {})
+    msg.post(UI_URL, HASH_STATE_CHANGED, { state = state_hash(self.state) })
+
+    print(string.format("[INFO] LocalNetTest 0.0.4 ready. Peer ID: %s", self.peer_id))
+end
+
 function update(self, dt)
-    if self.discovery then
-        self.discovery:receive()
+    if self.state == STATE_SPLASH then
+        self.splash_elapsed = self.splash_elapsed + dt
+        if self.splash_elapsed >= SPLASH_DURATION then
+            change_state(self, STATE_MENU)
+        end
+        return
+    end
+
+    if self.state == STATE_CREATE then
+        poll_server(self)
+    elseif self.state == STATE_JOIN then
+        poll_client(self)
     end
 end
 
 function final(self)
-    if self.discovery then
-        self.discovery:close()
-        self.discovery = nil
-    end
+    exit_state(self, self.state)
 end
 
-function on_input(self, action_id, action)
-    if action_id == hash("touch") and action.pressed then
-        print("Touch!")
-        -- 範例：點一下就再廣播一次 HELLO
-        if self.discovery then
-            self.discovery:broadcast_hello()
-        end
+function on_message(self, message_id, message, sender)
+    if message_id ~= HASH_UI_ACTION then
+        return
+    end
+    local action = message.action
+    if action == ACTION_SKIP_SPLASH then
+        change_state(self, STATE_MENU)
+    elseif action == ACTION_CREATE_ROOM then
+        change_state(self, STATE_CREATE)
+    elseif action == ACTION_JOIN_ROOM then
+        change_state(self, STATE_JOIN)
+    elseif action == ACTION_BACK_TO_MENU then
+        change_state(self, STATE_MENU)
+    elseif action == ACTION_SEND_PING then
+        send_ping(self)
     end
 end
