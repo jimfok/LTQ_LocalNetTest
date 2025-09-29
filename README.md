@@ -24,6 +24,13 @@ Happy Defolding!
 
 The file `src/network/discovery.lua` sets up a multicast UDP listener and broadcasts a `HELLO` message with the device ID and model. This allows instances of the game on the same network to announce themselves and detect others. `main/main.script` shows how the module is initialized and used each frame.
 
+### Room simulator workflows (spec:sim-tools)
+
+- Follow `docs/spec/sim-tools.md` for full requirements and logging expectations that keep the simulators aligned with runtime logic.
+- The server-room harness (to be exposed as `scripts/run-room-server.sh`) bootstraps `RoomServer` with deterministic flags like `--port`, `--room-id`, and `--duration`, then emits machine-readable lines such as `TRACE|sim.server|start|ok|port=47001 roomId=3`.
+- The join-room harness (planned as `scripts/run-room-client.sh`) reuses `Discovery` probes to broadcast, auto-match servers, and report progress via `TRACE|sim.client|discover|sent` / `TRACE|sim.client|join|accept|roomId=...`.
+- Use these simulators to validate create/join flows on a single machine while other devices or agents are offline; capture follow-up tasks in `docs/tasks/2025-10-06-sim-tools.md` when behaviour evolves.
+
 ## Spec-driven architecture
 
 Spec-driven, AI-assited workflow's alignment
