@@ -1,7 +1,7 @@
-require "spec.spec_helper"
+require "tests.spec_helper"
 
 local RoomServer = require "src.network.room_server"
-local network_support = require "spec.support.network_context"
+local network_support = require "tests.support.network_context"
 local build_context = network_support.build_room_server_context
 
 describe("network.room_server", function()

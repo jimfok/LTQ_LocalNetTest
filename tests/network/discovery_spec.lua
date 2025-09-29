@@ -1,7 +1,7 @@
-require "spec.spec_helper"
+require "tests.spec_helper"
 
 local Discovery = require "src.network.discovery"
-local network_support = require "spec.support.network_context"
+local network_support = require "tests.support.network_context"
 local build_context = network_support.build_discovery_context
 
 describe("network.discovery", function()

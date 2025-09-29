@@ -22,5 +22,5 @@ cd "$ROOT_DIR"
 if [ $# -gt 0 ]; then
   exec busted "$@"
 else
-  exec busted spec
+  exec busted tests
 fi

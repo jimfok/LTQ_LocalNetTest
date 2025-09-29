@@ -26,23 +26,29 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 
 ## Spec-driven architecture
 
+Spec-driven, AI-assited workflow's alignment
+Spec -> baseline requirements, under `docs/spec`
+Plan -> iteration steps for AI/agents, under `docs/plan`
+Tasks -> bite-size actionable units, sometimes auto-generated from plan, under `docs/tasks`
+ADRs -> gauardrails and historical reasoning, under `docs/adrs`
+
 - Network code now lives under `src/network`, making it reusable from both runtime scripts and unit specs.
 - `main/main.script` creates a `Discovery` instance, which exposes `listen`, `broadcast_hello`, `receive`, and `close` instance methods.
-- Behavioural specs reside in `spec/network` and assume the [Busted](https://lunarmodules.github.io/busted/) runner (`luarocks install busted` then `busted spec`).
+- Behavioural specs reside in `tests/network` and assume the [Busted](https://lunarmodules.github.io/busted/) runner (`luarocks install busted` then `busted tests`).
 - Specs rely on dependency injection; production code uses Defold's `socket`, `json`, and `sys` while tests stub these interfaces.
-- Shared doubles live under `spec/support` (for example, `spec/support/network_context.lua`) so new specs can require an existing context instead of rewriting stubs.
+- Shared doubles live under `tests/support` (for example, `tests/support/network_context.lua`) so new specs can require an existing context instead of rewriting stubs.
 - Override the UDP port via `game.project` (add `[network]` → `discovery_port = 53317`, for example) to run multiple instances on the same machine.
 
 ### Tests vs specs
 
-- Prefer authoring unit and behaviour specs under `spec/`; the `tests/` directory is a placeholder for future integration harnesses and should remain empty unless you are wiring alternative runners.
+- Prefer authoring unit and behaviour specs under `tests/`; `docs/spec/` stores narrative outlines that feed those executables, while integration harnesses can grow alongside them when needed.
 - Run the full networking spec suite with `./scripts/test-network.sh`, or pass individual files/dirs to `./scripts/test.sh` for focused runs.
 
 ## Development workflow
 
 - Install LuaRocks + Busted for LuaJIT: `luarocks --lua-version=5.1 --lua-interpreter=luajit install busted --local`.
-- Run `./scripts/test.sh` to execute the full spec suite; pass extra arguments (for example, `./scripts/test.sh spec/network/discovery_spec.lua`) for focused runs without reconfiguring your shell.
-- Use `busted spec/network/discovery_spec.lua` (or the room server spec) for focused runs while iterating.
+- Run `./scripts/test.sh` to execute the full spec suite; pass extra arguments (for example, `./scripts/test.sh tests/network/discovery_spec.lua`) for focused runs without reconfiguring your shell.
+- Use `busted tests/network/discovery_spec.lua` (or the room server spec) for focused runs while iterating.
 - Use `./scripts/build.sh` to invoke `tools/bob.jar` with Java 21+, or pass custom flags such as `./scripts/build.sh --archive --platform armv7-android bundle`.
 - Use `./scripts/bob-smoke.sh` to exercise Bob's `resolve`, `build`, and `bundle` commands in sequence (pass `--platform` to target a different runtime).
 - Download Bob separately from the Defold editor (`Help → Download Bob`) and place it at `tools/bob.jar`; the file is `.gitignore`d so each developer/CI runner keeps a local copy.
