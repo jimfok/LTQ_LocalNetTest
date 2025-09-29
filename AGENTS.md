@@ -27,6 +27,11 @@
 - Build artifacts with `./scripts/build.sh` (Bob wrapper) and use `./scripts/bob-smoke.sh` to exercise Bob's `resolve`, `build`, and `bundle` commands in sequence.
 - Override network ports per environment through `[network] discovery_port` in `game.project` when orchestrating multi-agent or multi-device test runs.
 
+## GitHub Workflows
+- The repository intentionally ships without GitHub Actions; do not create or restore `.github/workflows/*.yml` files unless the owner provides explicit instructions.
+- If a task mentions CI, confirm with the owner whether workflows should remain absent before touching GitHub configuration.
+- Document any local validation steps in `README.md`, specs, or task trackers instead of relying on hosted workflows.
+
 ## Defold 1.11 Quick-Test Playbook
 - When wiring new GUI components into a collection, use literal component ids (e.g. `/main/ui.gui`) and avoid escaped quotes or Defold will reject the collection.
 - Stick to `/builtins/fonts/default.font` for UI text; older Defold runtimes ship without `system_font.font`.
