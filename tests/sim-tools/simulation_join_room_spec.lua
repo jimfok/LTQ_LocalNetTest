@@ -1,8 +1,8 @@
--- tests/sim/client_discovery_spec.lua
+-- tests/sim-tools/simulation_join_room_spec.lua
 local busted = require "busted"
 local Discovery = require "network.discovery"
 
-describe("Client Discovery", function()
+describe("Simulation-Join Room discovers servers (spec:sim-tools)", function()
     local discovery
 
     setup(function()

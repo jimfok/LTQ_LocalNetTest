@@ -1,8 +1,8 @@
--- tests/sim/server_accept_spec.lua
+-- tests/sim-tools/simulation_created_room_spec.lua
 local busted = require "busted"
 local RoomServer = require "network.room_server"
 
-describe("Room Server Accept Flow", function()
+describe("Simulation-Created Room accepts join payloads (spec:sim-tools)", function()
     local server
 
     setup(function()
