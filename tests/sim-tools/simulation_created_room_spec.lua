@@ -37,6 +37,6 @@ describe("Simulation-Created Room accepts join payloads (spec:sim-tools)", funct
         -- Verify that the client was added to the server's clients list
         assert.is_true(#server.clients > 0, "No clients connected")
 
-        -- TODO(spec:sim-tools): Replace real socket interaction with fakes and assert TRACE|sim.server|join output.
+        -- TODO(spec:sim-tools): Replace real socket interaction with tests/support/sim_tools_fakes and assert TRACE|sim.server|join output.
     end)
 end)

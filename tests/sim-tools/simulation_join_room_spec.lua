@@ -30,6 +30,6 @@ describe("Simulation-Join Room discovers servers (spec:sim-tools)", function()
         assert.is_equal(payload.protocol, "localsend", "protocol mismatch in HELLO message")
         assert.is_true(payload.udp_port == 53316, "udp_port mismatch in HELLO message")
 
-        -- TODO(spec:sim-tools): Swap to stubbed discovery and assert TRACE|sim.client|discover/join events instead of print output.
+        -- TODO(spec:sim-tools): Swap to stubbed discovery helpers from tests/support/sim_tools_fakes and assert TRACE|sim.client|discover/join events instead of print output.
     end)
 end)
