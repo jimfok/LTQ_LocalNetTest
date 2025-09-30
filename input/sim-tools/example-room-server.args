@@ -1,0 +1,5 @@
+# input/sim-tools/example-room-server.args
+# Placeholder argv manifest for Simulation-Created Room harness (spec:sim-tools).
+--port=53316
+--room-id=sample
+--duration=5
