@@ -4,7 +4,7 @@
 - Owner: Agent session 2025-10-06
 - Linked Plan: docs/plan/2025-10-06-sim-tools.md (active iteration), docs/plan/2025-09-30-sim-tools.md (historical checkpoints)
 - Linked Tasks: docs/tasks/2025-10-06-sim-tools.md, docs/tasks/2025-09-30-sim-tools.md
-- Linked Tests: tests/sim/server_accept_spec.lua (S1), tests/sim/client_discovery_spec.lua (S2)
+- Linked Tests: tests/sim-tools/simulation_created_room_spec.lua (S1), tests/sim-tools/simulation_join_room_spec.lua (S2)
 
 ## Overview
 This spec clarifies the behaviour of the simulation tooling workflows so that developers can reliably reproduce and debug matchmaking flows without live players. The active roadmap lives in [docs/plan/2025-10-06-sim-tools.md](../plan/2025-10-06-sim-tools.md) and builds on the earlier checkpoints in [docs/plan/2025-09-30-sim-tools.md](../plan/2025-09-30-sim-tools.md). Guidance captured on the `feature/sim-tools-requirements` branch is folded into this document so the active plan and historical expectations stay in one place.
@@ -16,7 +16,14 @@ Give developers single-machine room workflow coverage by adding CLI-driven simul
 - `main/main.script` owns the room creation and join flows exposed through the in-game HUD. It reacts to GUI button events (`ACTION_CREATE_ROOM`, `ACTION_JOIN_ROOM`) by starting or tearing down the UDP server/client helpers and keeps the UI model in sync.
 - `main/ui.gui_script` exposes the Create/Join buttons and relays user input to `main/main.script`. It reads status and log buffers through `src/ui/model.lua`.
 - `src/ui/model.lua` stores peer metadata, per-state status text, and chronological logs. Simulator automation should keep using these helpers instead of writing directly to GUI nodes.
+- `src/sim-tools/simulation_created_room.lua` wraps the runtime `RoomServer` lifecycle in the `run_simulation_created_room()` harness so CLI scripts can boot the Simulation-Created Room flow without touching UI collections.
+- `src/sim-tools/simulation_join_room.lua` exposes the complementary `run_simulation_join_room()` harness that reuses `Discovery` probes for the Simulation-Join Room workflow.
 - `scripts/sim-tools/` houses CLI entry points. These scripts should evolve into wrappers that either drive a headless build (via Bob) or emit the same `TRACE|sim.*|…` lines that runtime scripts print when they transition states so downstream tooling can assert behaviour.
+
+## Spec ↔ Code Map
+- **Simulator Harnesses**: `src/sim-tools/simulation_created_room.lua` and `src/sim-tools/simulation_join_room.lua` are the single entry points for automation. Both files tag TODOs with `spec:sim-tools` so follow-up work can reference this spec when wiring CLI flags, TRACE logging, and graceful shutdown logic.
+- **Behaviour Specs**: `tests/sim-tools/simulation_created_room_spec.lua` (Scenario S1) and `tests/sim-tools/simulation_join_room_spec.lua` (Scenario S2) mirror the simulator expectations. Keep describe blocks referencing `spec:sim-tools` for traceability when adding new assertions.
+- **Plans & Tasks**: `docs/plan/2025-10-06-sim-tools.md` and `docs/tasks/2025-10-06-sim-tools.md` must refer to the simulator harness names above to avoid drift between planning notes and executable code.
 
 ## Requirements
 ### R1: Server-room simulator (spec:sim-tools)
@@ -47,16 +54,16 @@ During the initial phase the simulation tools mirror the production Create Room 
 - Coordinate the self-test via a simple manual multi-process setup—run the room creation action on one process and join actions on two others—to keep the proof-of-concept quick to execute.
 
 ## Scenarios
-### S1: Server simulator boots and accepts join payloads
+### S1: Simulation-Created Room boots and accepts join payloads
 1. Execute `scripts/run-room-server.sh --port 47001 --room-id 3`.
-2. The script initialises a simulator module that internally constructs `RoomServer.new` with deterministic dependencies.
+2. The script initialises `src/sim-tools/simulation_created_room.lua` (harness: `run_simulation_created_room`) which internally constructs `RoomServer.new` with deterministic dependencies.
 3. The simulator logs `TRACE|sim.server|start|ok|port=47001 roomId=3`.
 4. When a TCP client sends a JSON `JoinRoom` payload, the simulator responds with `{"status":"Accept",...}` and emits `TRACE|sim.server|join|accept|peer=<ip>:<port>`.
 5. Simulator exits cleanly on SIGINT (Ctrl+C) and logs `TRACE|sim.server|stop|ok`.
 
-### S2: Client simulator discovers broadcast and pings server
+### S2: Simulation-Join Room discovers broadcast and pings server
 1. Execute `scripts/run-room-client.sh --broadcast 255.255.255.255 --udp-port 53317`.
-2. The simulator listens using `Discovery.new`, sends periodic `HELLO` probes, and logs each send with `TRACE|sim.client|discover|sent`.
+2. The simulator delegates to `src/sim-tools/simulation_join_room.lua` (harness: `run_simulation_join_room`) which listens using `Discovery.new`, sends periodic `HELLO` probes, and logs each send with `TRACE|sim.client|discover|sent`.
 3. When a pong is received, it logs `TRACE|sim.client|discover|match|peer=<id>` and triggers a TCP join attempt using `RoomServer` defaults.
 4. The simulator sends a ping JSON payload, receives the `Accept` response, and prints `TRACE|sim.client|join|accept|roomId=...`.
 
@@ -87,3 +94,4 @@ During the initial phase the simulation tools mirror the production Create Room 
 - [ ] Lightweight `TRACE|sim-tools|…` and CLI `TRACE|sim.*|…` console entries are emitted when simulator scripts or UI buttons trigger the flows.
 - [ ] Developers can execute the scenarios above without manual data setup and can rely on the linked task trackers to log outcomes.
 - [ ] Future spec updates synchronise with the listed plan, task, and test documents so executor agents inherit the same expectations.
+- [ ] `src/sim-tools/` harness names and `tests/sim-tools/` spec filenames stay aligned with `docs/plan/2025-10-06-sim-tools.md` and `docs/tasks/2025-10-06-sim-tools.md` references.

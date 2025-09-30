@@ -1,7 +1,7 @@
--- src/sim/client.lua
+-- src/sim-tools/simulation_join_room.lua
 local Discovery = require "network.discovery"
 
-local function main()
+local function run_simulation_join_room()
     -- TODO(spec:sim-tools): Accept broadcast/udp-port flags and configure discovery accordingly.
     local discovery = Discovery:new({
         port = 53316,
@@ -22,4 +22,4 @@ local function main()
     end
 end
 
-main()
+run_simulation_join_room()

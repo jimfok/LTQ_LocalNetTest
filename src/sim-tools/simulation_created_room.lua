@@ -1,8 +1,8 @@
--- src/sim/server.lua
+-- src/sim-tools/simulation_created_room.lua
 local RoomServer = require "network.room_server"
 local Discovery = require "network.discovery"
 
-local function main()
+local function run_simulation_created_room()
     -- TODO(spec:sim-tools): Read port/room-id from CLI args instead of hard-coding values here.
     local server = RoomServer:new({
         port = 53316,
@@ -33,4 +33,4 @@ local function main()
     end
 end
 
-main()
+run_simulation_created_room()
