@@ -19,15 +19,15 @@ function SimToolsFakes.stub_harness()
     }
 end
 
-function M.collect_trace_logs()
+function SimToolsFakes.collect_trace_logs()
     --[[
     Capture TRACE lines pushed by log sinks during specs.
     Placeholder outline:
       * Store each TRACE entry for assertions.
       * Expose both the list and sink function to specs.
     ]]
-    -- TODO(spec:sim-tools): Allow filtering or pattern matching when collecting TRACE lines.
-    -- TODO(spec:sim-tools): Expose helper assertions for validating expected TRACE sequences.
+    -- TODO(spec:sim-tools): Allow optional filter/pattern arguments so collectors can focus on relevant TRACE entries.
+    -- TODO(spec:sim-tools): Expose helper assertions (e.g. expect_sequence) for validating expected TRACE sequences.
     local lines = {}
     return {
         lines = lines,
@@ -37,4 +37,4 @@ function M.collect_trace_logs()
     }
 end
 
-return M
+return SimToolsFakes
