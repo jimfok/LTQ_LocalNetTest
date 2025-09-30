@@ -9,6 +9,8 @@ local function serialise_fields(fields)
       * Accept a table of fields and turn each into " key=value".
       * Concatenate fragments preserving insertion order.
     ]]
+    -- TODO(spec:sim-tools): Preserve insertion order when serialising structured fields.
+    -- TODO(spec:sim-tools): Escape delimiter characters so TRACE output stays machine readable.
     if not fields then
         return ""
     end
@@ -28,6 +30,9 @@ function M.trace(component, action, status, fields)
       * Concatenate into TRACE|component|action|status format.
       * Append serialised fields when present.
     ]]
+    -- TODO(spec:sim-tools): Normalise nil/empty arguments to defaults before serialising.
+    -- TODO(spec:sim-tools): Append serialised field fragments produced by serialise_fields.
+    -- TODO(spec:sim-tools): Route final TRACE line through configured log sinks.
     local base = string.format("TRACE|%s|%s|%s", component or "sim.tools", action or "pending", status or "stub")
     return base .. serialise_fields(fields)
 end

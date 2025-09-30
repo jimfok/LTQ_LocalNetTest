@@ -13,6 +13,9 @@ function M.build_client_harness(config, deps)
       * Attempt join operations against the advertised room server.
       * Coordinate scheduler hooks for retries and timeouts.
     ]]
+    -- TODO(spec:sim-tools): Configure Discovery probes based on config and dependency overrides.
+    -- TODO(spec:sim-tools): Implement RoomServer join attempts with retry/backoff strategy hooks.
+    -- TODO(spec:sim-tools): Wire scheduler/timer callbacks so the client loop can coordinate retries.
     return {
         config = config or {},
         deps = deps or {},
@@ -29,6 +32,9 @@ function M.run_client_loop(state)
       * Handle discovery responses and attempt joins.
       * Emit TRACE logs covering attempt/response states.
     ]]
+    -- TODO(spec:sim-tools): Broadcast discovery requests using configured discovery client on a repeating interval.
+    -- TODO(spec:sim-tools): Handle discovery responses and drive join attempts until success/timeout.
+    -- TODO(spec:sim-tools): Emit TRACE logs for each attempt, response, and exit condition.
     return state
 end
 

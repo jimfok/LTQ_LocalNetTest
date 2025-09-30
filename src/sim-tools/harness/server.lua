@@ -13,6 +13,9 @@ function M.build_server_harness(config, deps)
       * Attach Discovery listeners for broadcast announcements.
       * Prepare scheduler hooks for cooperative multitasking.
     ]]
+    -- TODO(spec:sim-tools): Instantiate RoomServer with provided config and dependency overrides.
+    -- TODO(spec:sim-tools): Attach Discovery listeners that advertise room availability to clients.
+    -- TODO(spec:sim-tools): Register scheduler/timer hooks for cooperative server loop execution.
     return {
         config = config or {},
         deps = deps or {},
@@ -29,6 +32,9 @@ function M.run_server_loop(state)
       * Process discovery announcements and accept joins.
       * Emit TRACE logs for each lifecycle transition.
     ]]
+    -- TODO(spec:sim-tools): Drain queued events and invoke handlers until shutdown criteria are met.
+    -- TODO(spec:sim-tools): Process discovery announcements and accept/track client join state.
+    -- TODO(spec:sim-tools): Emit TRACE logs for lifecycle transitions and termination paths.
     return state
 end
 

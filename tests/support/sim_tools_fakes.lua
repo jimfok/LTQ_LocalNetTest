@@ -9,6 +9,8 @@ function M.build_fake_socket()
       * Capture payloads pushed through send for later inspection.
       * Expand into richer fake sockets once networking hooks land.
     ]]
+    -- TODO(spec:sim-tools): Record payload metadata (timestamps, sizes) for richer assertions.
+    -- TODO(spec:sim-tools): Emulate socket lifecycle methods needed by harness implementations.
     local fake = { sent = {} }
     function fake:send(payload)
         table.insert(self.sent, payload)
@@ -23,6 +25,8 @@ function M.build_fake_timer()
       * Track elapsed time as ticks are invoked.
       * Offer helpers for advancing time deterministically.
     ]]
+    -- TODO(spec:sim-tools): Track scheduled callbacks and trigger them during tick advances.
+    -- TODO(spec:sim-tools): Provide helpers to reset elapsed time between spec runs.
     return {
         elapsed = 0,
         tick = function(self, delta)
@@ -38,6 +42,8 @@ function M.collect_trace_logs()
       * Store each TRACE entry for assertions.
       * Expose both the list and sink function to specs.
     ]]
+    -- TODO(spec:sim-tools): Allow filtering or pattern matching when collecting TRACE lines.
+    -- TODO(spec:sim-tools): Expose helper assertions for validating expected TRACE sequences.
     local lines = {}
     return {
         lines = lines,

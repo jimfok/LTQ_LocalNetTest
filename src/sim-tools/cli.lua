@@ -13,6 +13,8 @@ function M.parse_argv(argv)
       * Inspect argv for the command name (argv[1]).
       * Expand into option tables once flag parsing lands.
     ]]
+    -- TODO(spec:sim-tools): Inspect argv[1] and normalise command aliases before dispatch.
+    -- TODO(spec:sim-tools): Parse remaining argv entries into structured option tables.
     return {
         command = argv and argv[1] or nil,
         options = {},
@@ -27,6 +29,9 @@ function M.dispatch(command, argv, deps)
       * Forward parsed options to harness builders.
       * Emit TRACE lines through the shared logging helper.
     ]]
+    -- TODO(spec:sim-tools): Resolve dependency overrides (e.g. sinks, timers) before invoking harness builders.
+    -- TODO(spec:sim-tools): Forward parsed options into build_*_harness implementations once available.
+    -- TODO(spec:sim-tools): Emit TRACE lines describing dispatch success or failure outcomes.
     if command == "simulation-created-room" then
         local harness = server_harness.build_server_harness(argv or {}, deps)
         return {
