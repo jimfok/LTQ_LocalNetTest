@@ -9,6 +9,11 @@
 ## Overview
 This spec clarifies the behaviour of the simulation tooling workflows so that developers can reliably reproduce and debug matchmaking flows without live players. The active roadmap lives in [docs/plan/2025-10-06-sim-tools.md](../plan/2025-10-06-sim-tools.md) and builds on the earlier checkpoints in [docs/plan/2025-09-30-sim-tools.md](../plan/2025-09-30-sim-tools.md). Guidance captured on the `feature/sim-tools-requirements` branch is folded into this document so the active plan and historical expectations stay in one place.
 
+## Current Status (2025-10-06 validation reset)
+- CLI, harness, and logging scaffolding were temporarily removed while we re-align the placeholder structure with documentation.
+- Follow the reconciliation checklist in [docs/plan/checklists/sim-tools-validation.md](../plan/checklists/sim-tools-validation.md) before re-creating any modules. New files should start as comment-only pseudo-code so future TODOs stay scoped to functions.
+- Wrapper scripts `scripts/run-room-server.sh` / `scripts/run-room-client.sh` remain pending. Use the echo-only stubs in `scripts/sim-tools/` until the CLI bridge is restored through the documented plan.
+
 ## Purpose
 Give developers single-machine room workflow coverage by adding CLI-driven simulators that mirror the in-game `Create Room` (server) and `Join Room` (client) behaviours. Each simulator must reuse existing `src/network` modules to stay in lockstep with runtime logic and emit machine-readable logs for downstream automation.
 
