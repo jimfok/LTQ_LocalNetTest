@@ -9,8 +9,8 @@ function M.stdout_sink()
       * Accept TRACE lines and forward to print for visibility.
       * Guard against nil entries before printing.
     ]]
-    -- TODO(spec:sim-tools): Normalise TRACE payloads before printing for consistent formatting.
-    -- TODO(spec:sim-tools): Ensure nil or empty inputs are safely ignored without errors.
+    -- TODO(spec:sim-tools): Format non-string TRACE payloads with tostring/serialisers before printing so stdout output stays consistent.
+    -- TODO(spec:sim-tools): Ensure nil or blank inputs (line == nil or line:match("^%s*$")) are skipped to avoid emitting empty log lines.
     return function(line)
         if line then
             print(line)
@@ -25,8 +25,8 @@ function M.collector_sink()
       * Maintain an internal table of entries.
       * Provide a push method storing new TRACE lines.
     ]]
-    -- TODO(spec:sim-tools): Extend collector with helpers to reset and snapshot collected entries.
-    -- TODO(spec:sim-tools): Guard push method against nil lines and non-string payloads.
+    -- TODO(spec:sim-tools): Add reset/snapshot helpers (e.g. reset(), snapshot()) so specs can manage collected entries without mutating internals.
+    -- TODO(spec:sim-tools): Guard the push method against nil, blank, or non-string payloads before storing them in entries.
     local collected = {}
     return {
         entries = collected,

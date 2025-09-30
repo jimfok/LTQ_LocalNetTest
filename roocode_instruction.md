@@ -22,6 +22,20 @@ Do **not** modify the items below unless the maintainer requests it in the task 
 - Maintain consistent Lua style: use clear names, early returns for error cases, and avoid global state unless the module contract requires it.
 - Keep runtime logging structured (e.g., `TRACE|component|action|status`) rather than ad-hoc prints, and clean up temporary debugging output before committing.
 - Update or add tests in `tests/` whenever behaviour changes, and run `./scripts/test.sh` to validate before hand-off.
+- During review passes, audit TODO comments alongside the current implementation: remove TODOs when the behaviour matches the referenced expectation, or refine the note to describe the remaining work if gaps persist.
+
+## Outstanding TODO Backlog
+Coder Agent: the following files still contain `TODO(spec:sim-tools)` markers that need implementation. Execute the described tasks and remove the comments when the behaviour matches the expectation:
+- `src/sim-tools/cli.lua`
+- `src/sim-tools/harness/client.lua`
+- `src/sim-tools/harness/server.lua`
+- `src/sim-tools/log_sinks.lua`
+- `src/sim-tools/logging.lua`
+- `src/sim-tools/simulation_created_room.lua`
+- `src/sim-tools/simulation_join_room.lua`
+- `tests/support/sim_tools_fakes.lua`
+- `tests/sim-tools/simulation_created_room_spec.lua`
+- `tests/sim-tools/simulation_join_room_spec.lua`
 
 ## Change Logging
 Every coding session must append a summary line to `roocode_changes.log` (create the file if it does not exist) using the format below:
