@@ -26,8 +26,8 @@ function SimToolsFakes.collect_trace_logs()
       * Store each TRACE entry for assertions.
       * Expose both the list and sink function to specs.
     ]]
-    -- TODO(spec:sim-tools): Allow optional filter/pattern arguments (e.g. component/action predicates) so collectors can focus on relevant TRACE entries.
-    -- TODO(spec:sim-tools): Expose helper assertions (e.g. expect_sequence(expected_lines)) for validating expected TRACE sequences.
+    -- TODO(spec:sim-tools): Allow optional filter/pattern arguments so collectors can focus on relevant TRACE entries.
+    -- TODO(spec:sim-tools): Expose helper assertions (e.g. expect_sequence) for validating expected TRACE sequences.
     local lines = {}
     return {
         lines = lines,

@@ -13,9 +13,9 @@ function M.build_client_harness(config, deps)
       * Attempt join operations against the advertised room server.
       * Coordinate scheduler hooks for retries and timeouts.
     ]]
-    -- TODO(spec:sim-tools): Configure Discovery:new({...}) using config (config.broadcast, config.udp_port) or dependency overrides before returning the harness.
-    -- TODO(spec:sim-tools): Implement join attempt helpers that retry RoomServer connections with configurable backoff hooks from deps.retry/deps.sleep.
-    -- TODO(spec:sim-tools): Surface scheduler/timer callbacks on the harness (deps.scheduler/deps.timers) so the client loop can coordinate retries.
+    -- TODO(spec:sim-tools): Configure Discovery:new(...) using config (broadcast, udp_port) or dependency overrides before returning the harness.
+    -- TODO(spec:sim-tools): Implement join attempt helpers that retry RoomServer connections with configurable backoff hooks from deps.
+    -- TODO(spec:sim-tools): Surface scheduler/timer callbacks on the harness so the client loop can coordinate retries.
     return {
         config = config or {},
         deps = deps or {},
@@ -32,9 +32,9 @@ function M.run_client_loop(state)
       * Handle discovery responses and attempt joins.
       * Emit TRACE logs covering attempt/response states.
     ]]
-    -- TODO(spec:sim-tools): Use state.discovery to broadcast HELLO probes at the configured interval sourced from config.duration/config.interval.
-    -- TODO(spec:sim-tools): Consume discovery responses and drive join attempts until success or the configured timeout elapses, utilising retry helpers.
-    -- TODO(spec:sim-tools): Emit TRACE logs for attempts, responses, and exit conditions via the shared logging helper (logging.trace -> sink:push).
+    -- TODO(spec:sim-tools): Use state.discovery to broadcast HELLO probes at the configured interval.
+    -- TODO(spec:sim-tools): Consume discovery responses and drive join attempts until success or the configured timeout elapses.
+    -- TODO(spec:sim-tools): Emit TRACE logs for attempts, responses, and exit conditions via the shared logging helper.
     return state
 end
 
