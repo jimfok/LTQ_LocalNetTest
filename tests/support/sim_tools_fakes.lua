@@ -1,36 +1,20 @@
--- tests/support/sim_tools_fakes.lua
--- Placeholder fakes for spec:sim-tools simulator specs.
-local M = {}
+--[=[
+ spec:sim-tools simulator fakes placeholder
 
-function M.build_fake_socket()
-    --[[
-    Return a minimal fake socket capturing payloads for future assertions.
-    Placeholder outline:
-      * Capture payloads pushed through send for later inspection.
-      * Expand into richer fake sockets once networking hooks land.
-    ]]
-    -- TODO(spec:sim-tools): Record payload metadata (timestamps, sizes) for richer assertions.
-    -- TODO(spec:sim-tools): Emulate socket lifecycle methods needed by harness implementations.
-    local fake = { sent = {} }
-    function fake:send(payload)
-        table.insert(self.sent, payload)
-    end
-    return fake
-end
+ Pseudo-code outline:
+ * Provide fake harness modules that capture received options for assertions.
+ * Emit deterministic TRACE lines for specs without hitting real sockets.
+ * Offer utilities to simulate discovery replies and join acknowledgements.
+]=]
 
-function M.build_fake_timer()
-    --[[
-    Provide a stub timer interface consumed by harness loops later on.
-    Placeholder outline:
-      * Track elapsed time as ticks are invoked.
-      * Offer helpers for advancing time deterministically.
-    ]]
-    -- TODO(spec:sim-tools): Track scheduled callbacks and trigger them during tick advances.
-    -- TODO(spec:sim-tools): Provide helpers to reset elapsed time between spec runs.
+local SimToolsFakes = {}
+
+function SimToolsFakes.stub_harness()
     return {
-        elapsed = 0,
-        tick = function(self, delta)
-            self.elapsed = self.elapsed + (delta or 0)
+        calls = {},
+        run = function(self, options)
+            table.insert(self.calls, options)
+            return nil, "stub harness executed"
         end,
     }
 end

@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# TRACE|sim-tools|run-room-client|pending
-# Placeholder wrapper for the Simulation-Join Room CLI entrypoint (spec:sim-tools).
 set -euo pipefail
 
-echo "Simulation-Join Room wrapper placeholder (spec:sim-tools)."
-echo "Invoke scripts/sim-tools/simulation-join-room.sh once CLI wiring lands."
+# spec:sim-tools run-room-client placeholder
+#
+# Future command flow:
+#   lua src/sim-tools/cli.lua simulation-join-room "${@}" \
+#       --duration "${DURATION}" --discovery-target "${TARGET}" --log-level TRACE
+#
+# Stub keeps automation aware of the expected entrypoint without requiring the
+# unfinished CLI implementation.
+echo "sim-tools client harness placeholder: CLI wiring pending"

@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# TRACE|sim-tools|run-room-server|pending
-# Placeholder wrapper for the Simulation-Created Room CLI entrypoint (spec:sim-tools).
 set -euo pipefail
 
-echo "Simulation-Created Room wrapper placeholder (spec:sim-tools)."
-echo "Invoke scripts/sim-tools/simulation-created-room.sh once CLI wiring lands."
+# spec:sim-tools run-room-server placeholder
+#
+# Future command flow:
+#   lua src/sim-tools/cli.lua simulation-created-room "${@}" \
+#       --duration "${DURATION}" --discovery-port "${PORT}" --log-level TRACE
+#
+# This script remains an echo stub until the CLI is implemented so downstream
+# agents know which entrypoint to invoke without triggering missing modules.
+echo "sim-tools server harness placeholder: CLI wiring pending"

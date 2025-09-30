@@ -1,16 +1,12 @@
--- tests/sim-tools/simulation_cli_spec.lua
-local cli = require "sim-tools.cli"
+--[=[
+ spec:sim-tools CLI spec placeholder
 
-describe("Simulation CLI scaffolding (spec:sim-tools)", function()
-    it("returns a stub harness when dispatching the server command", function()
-        local result = cli.dispatch("simulation-created-room", {}, {})
-        assert.is_table(result)
-        assert.is_table(result.harness)
-    end)
+ Pseudo-code outline:
+ * Document CLI argument parsing scenarios covering server and client flows.
+ * Provide fixtures for argv arrays and expected dispatch targets.
+ * Assert that logging configuration is forwarded to harness modules.
+]=]
 
-    it("returns an error payload for unknown commands", function()
-        local result = cli.dispatch("unknown-command", {}, {})
-        assert.is_table(result)
-        assert.is_string(result.error)
-    end)
+describe("sim-tools CLI", function()
+    pending("argument parsing and dispatch specs will be implemented once the CLI is wired")
 end)
