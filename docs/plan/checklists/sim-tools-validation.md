@@ -21,11 +21,11 @@ and avoid shipping premature implementations.
 ## Documentation Alignment Tasks
 - Mirror these placeholder expectations in `docs/spec/sim-tools.md` under a dedicated "Current Status" section so spec, plan, and
   tasks remain in sync.
-- Update `docs/tasks/2025-10-06-sim-tools.md` with checkboxes pointing back to this checklist so executor agents know which
+- Update `docs/tasks/2025-09-29-sim-tools.md` with checkboxes pointing back to this checklist so executor agents know which
   scaffolding artifacts to recreate with comment-only pseudo-code.
 
 ## Validation Checklist (to execute after scaffolding lands)
 - [ ] Run `./scripts/run-room-server.sh --duration 3` once the CLI bridge is implemented and documented.
 - [ ] Run `./scripts/run-room-client.sh --duration 3` after the client harness placeholder exists, capturing TRACE samples in
       follow-up task notes.
-- [ ] Record sample TRACE output for both flows in `docs/tasks/2025-10-06-sim-tools.md` to close the loop between code and plan.
+- [ ] Record sample TRACE output for both flows in `docs/tasks/2025-09-29-sim-tools.md` to close the loop between code and plan.
