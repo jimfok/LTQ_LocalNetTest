@@ -41,15 +41,39 @@ local function state_hash(state)
 end
 
 local function determine_local_ip()
+    local function pick_candidate(value)
+        if type(value) == "string" and value ~= "" and value ~= "127.0.0.1" then
+            return value
+        end
+    end
+
     if dns and dns.gethostname and dns.toip then
         local hostname = dns.gethostname()
         if hostname then
-            local ip = dns.toip(hostname)
-            if ip and ip ~= "" then
-                return ip
+            local primary, details = dns.toip(hostname)
+            if details and type(details) == "table" then
+                local aliases = details.ip or details.alias or {}
+                if type(aliases) == "string" then
+                    local candidate = pick_candidate(aliases)
+                    if candidate then
+                        return candidate
+                    end
+                elseif type(aliases) == "table" then
+                    for _, entry in ipairs(aliases) do
+                        local candidate = pick_candidate(entry)
+                        if candidate then
+                            return candidate
+                        end
+                    end
+                end
+            end
+            local candidate = pick_candidate(primary)
+            if candidate then
+                return candidate
             end
         end
     end
+
     return "127.0.0.1"
 end
 
