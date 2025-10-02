@@ -41,6 +41,7 @@ Give developers single-machine room workflow coverage by adding CLI-driven simul
 
 ### R2: Join-room simulator (spec:sim-tools)
 - Must autodiscover a locally broadcast server, attempt a join, and issue keepalive pings so developers can validate the end-to-end handshake without another device.
+- Default discovery to UDP broadcast (e.g. `255.255.255.255`) and continue operating even when multicast membership isn't available on the host OS; multicast support can arrive in a later milestone.
 - Reuse `Discovery` probes and `RoomServer` join logic while exposing CLI flags (`--broadcast`, `--udp-port`, `--duration`) that match the server simulator's determinism guarantees.
 - Emit machine-readable logs in the `TRACE|sim.client|action|status|key=value` format and continue to run unattended so future iterations can extend behaviours (e.g., scripted latency tests).
 - Operate entirely from CLI scripts; never require HUD interactions or modifications under `main/`.
@@ -56,6 +57,7 @@ During the initial phase the simulation tools mirror the production Create Room 
 ## Instrumentation & Orchestration
 - Emit lightweight console logs in `main/main.script` (e.g. `TRACE|sim-tools|simulation-created-room|ok`) when HUD-driven flows fire so developers can correlate actions while debugging without new telemetry pipelines. These logs remain read-only touchpoints for simulators.
 - Simulator scripts emit structured lines (`TRACE|sim.server|…`, `TRACE|sim.client|…`) that capture action, status, and key metadata (`port`, `roomId`, `peer`). Keep both log families stable to support manual runs and future automation.
+- When discovery runs outside Defold, fall back to broadcast-only mode if joining the multicast group fails so the simulators stay aligned with the current runtime behaviour.
 - Coordinate the self-test via shell scripts—run the room server harness and the join harness from terminals using the wrappers listed below. HUD interactions stay optional for manual observation only.
   - `./scripts/run-room-server.sh --duration 5`
   - `./scripts/run-room-client.sh --duration 5`
@@ -68,9 +70,9 @@ During the initial phase the simulation tools mirror the production Create Room 
 
 ### S2: Simulation-Join Room discovers broadcast and pings server (active milestone)
 1. Execute `scripts/run-room-client.sh --broadcast 255.255.255.255 --udp-port 53317` while the Defold build hosts the room via **Create Room**.
-2. The simulator delegates to `src/sim-tools/simulation_join_room.lua` (harness: `run_simulation_join_room`) which listens using `Discovery.new`, sends periodic `HELLO` probes, and logs each send with `TRACE|sim.client|discover|sent`.
-3. When a pong is received, it logs `TRACE|sim.client|discover|match|peer=<id>` and triggers a TCP join attempt using `RoomServer` defaults.
-4. The simulator sends a ping JSON payload, receives the `Accept` response, and prints `TRACE|sim.client|join|accept|roomId=...`.
+2. The simulator delegates to `src/sim-tools/simulation_join_room.lua` (harness: `run_simulation_join_room`). It attempts multicast membership when available but always sends periodic UDP broadcast `HELLO` probes at the configured address, logging each send with `TRACE|sim.client|discover|sent`.
+3. When a broadcast response or discovery match arrives, it logs `TRACE|sim.client|discover|match|peer=<id>` and triggers a TCP join attempt using the host details advertised by the Defold runtime or CLI server harness.
+4. The simulator switches to TCP, sends the JoinRoom payload, receives the `Accept` response, and prints `TRACE|sim.client|join|accept|roomId=...`.
 
 ### S3: Automation hooks for CI agents
 1. Scripts accept `--duration` to cap run time for non-interactive jobs.
