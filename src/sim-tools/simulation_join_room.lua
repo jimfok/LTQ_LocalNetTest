@@ -264,6 +264,7 @@ local function receive_broadcast_event(discovery, config)
                     payload = {
                         device_id = payload.peer_id or payload.device_id or "unknown",
                         udp_port = payload.port or config.udp_port,
+                        tcp_port = payload.tcp_port,
                         pong = true,
                     },
                     ip = ip,
@@ -293,11 +294,14 @@ local function determine_peer_id(sys_info)
     return string.format("peer-%06d", math.random(0, 999999))
 end
 
-local function attempt_join(event, peer_id, config)
+local function attempt_join(event, peer_id)
     local host = event and event.ip
-    local port = event and event.payload and (event.payload.tcp_port or event.payload.port or event.payload.udp_port) or config.udp_port
-    if not host or not port then
-        return false, "missing_host_or_port"
+    if not host then
+        return false, "missing_host"
+    end
+    local port = event and event.payload and event.payload.tcp_port
+    if not port then
+        return nil, "missing_tcp_port"
     end
 
     local client, err = socket.tcp()
@@ -477,10 +481,18 @@ local function run_simulation_join_room()
                 peer = event.payload and event.payload.device_id or "unknown",
                 ip = event.ip or "?",
                 udp_port = event.payload and event.payload.udp_port,
+                tcp_port = event.payload and event.payload.tcp_port,
+                mode = event.mode,
             })
 
-            local joined_ok, response_or_err = attempt_join(event, peer_id, config)
-            if joined_ok then
+            local joined_ok, response_or_err = attempt_join(event, peer_id)
+            if joined_ok == nil then
+                emit("join", "skipped", {
+                    reason = response_or_err,
+                    peer = event.payload and event.payload.device_id or "unknown",
+                    tcp_port = event.payload and event.payload.tcp_port,
+                })
+            elseif joined_ok then
                 emit("join", "accept", {
                     roomId = response_or_err.roomId,
                     players = response_or_err.players and #response_or_err.players or 0,
@@ -492,6 +504,7 @@ local function run_simulation_join_room()
                 emit("join", "error", {
                     reason = response_or_err,
                     peer = event.payload and event.payload.device_id or "unknown",
+                    tcp_port = event.payload and event.payload.tcp_port,
                 })
             end
         end

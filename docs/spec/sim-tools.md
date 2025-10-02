@@ -60,7 +60,8 @@ During the initial phase the simulation tools mirror the production Create Room 
 - When discovery runs outside Defold, fall back to broadcast-only mode if joining the multicast group fails so the simulators stay aligned with the current runtime behaviour.
 - Emit `TRACE|sim.client|discover|warn|mode=broadcast-only` when multicast setup fails so operators understand the CLI is running in degraded mode.
 - In broadcast-only mode the client sends both the simulator `HELLO` payload and the runtime-compatible `ping` message each cycle so existing Defold hosts reply without protocol changes.
-- Broadcast fallback also listens for Defold `pong` replies and treats them as discovery matches so the TCP join handshake can proceed even without multicast.
+- Broadcast fallback also listens for Defold `pong` replies and treats them as discovery matches so discovery works without multicast.
+- Create Room (runtime or simulator) must start its TCP listener when the host flow becomes ready and include a `tcp_port` field in every HELLO/PONG payload so join clients know where to complete the handshake.
 - Runtime builds must publish a routable local IP before broadcasting; when the device reports multiple aliases, prefer RFC1918 ranges (`192.168.*` → `10.*` → `172.16–31.*`) ahead of VPN or link-local addresses so remote peers can see the host.
 - Coordinate the self-test via shell scripts—run the room server harness and the join harness from terminals using the wrappers listed below. HUD interactions stay optional for manual observation only.
   - `./scripts/run-room-server.sh --duration 5`
@@ -75,8 +76,8 @@ During the initial phase the simulation tools mirror the production Create Room 
 ### S2: Simulation-Join Room discovers broadcast and pings server (active milestone)
 1. Execute `scripts/run-room-client.sh --broadcast 255.255.255.255 --udp-port 53317` while the Defold build hosts the room via **Create Room**.
 2. The simulator delegates to `src/sim-tools/simulation_join_room.lua` (harness: `run_simulation_join_room`). It attempts multicast membership when available but always sends periodic UDP broadcast `HELLO` probes at the configured address, logging each send with `TRACE|sim.client|discover|sent`.
-3. When a broadcast response or discovery match arrives, it logs `TRACE|sim.client|discover|match|peer=<id>` and triggers a TCP join attempt using the host details advertised by the Defold runtime or CLI server harness.
-4. The simulator switches to TCP, sends the JoinRoom payload, receives the `Accept` response, and prints `TRACE|sim.client|join|accept|roomId=...`.
+3. When a broadcast response or discovery match arrives, it logs `TRACE|sim.client|discover|match|peer=<id>`. A TCP join attempt only occurs when the payload exposes a `tcp_port`; otherwise the harness logs `TRACE|sim.client|join|skipped|reason=no_tcp_port` and waits for the advertised port.
+4. When a `tcp_port` is present, the simulator switches to TCP, sends the JoinRoom payload, receives the `Accept` response, and prints `TRACE|sim.client|join|accept|roomId=...`.
 
 ### S3: Automation hooks for CI agents
 1. Scripts accept `--duration` to cap run time for non-interactive jobs.
