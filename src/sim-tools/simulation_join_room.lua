@@ -75,13 +75,15 @@ local function build_sys_info(sys_module)
     return info
 end
 
-local DEFAULT_BROADCAST = "224.0.0.167"
+local DEFAULT_MULTICAST = "224.0.0.167"
+local DEFAULT_BROADCAST = "255.255.255.255"
 local DEFAULT_UDP_PORT = 53316
 local DEFAULT_PROTOCOL = "localsend"
 local BROADCAST_INTERVAL = 1.0
 local POLL_INTERVAL = 0.1
 local TCP_TIMEOUT = 3
 local BROADCAST_ONLY = "broadcast-only"
+local UDP_RECEIVE_ATTEMPTS = 8
 
 local function is_multicast(addr)
     if not addr then return false end
@@ -152,11 +154,135 @@ local function parse_args(argv)
         i = i + 1
     end
 
-    if config.broadcast and is_multicast(config.broadcast) then
-        config.discovery_addr = config.broadcast
+    return config
+end
+
+local function parse_octets(addr)
+    if type(addr) ~= "string" then return nil end
+    local octets = {}
+    for part in addr:gmatch("%d+") do
+        octets[#octets + 1] = tonumber(part)
+    end
+    return octets[1], octets[2], octets[3], octets[4]
+end
+
+local function determine_local_ip()
+    local dns = socket.dns
+    if not (dns and dns.gethostname and dns.toip) then
+        return nil
+    end
+    local hostname = dns.gethostname()
+    if not hostname then return nil end
+    local primary, details = dns.toip(hostname)
+    local candidates = {}
+    local function collect(values)
+        if type(values) == "string" then
+            candidates[#candidates + 1] = values
+        elseif type(values) == "table" then
+            for _, entry in ipairs(values) do
+                collect(entry)
+            end
+        end
+    end
+    collect(primary)
+    if details and type(details) == "table" then
+        collect(details.ip)
+        collect(details.alias)
     end
 
-    return config
+    local function score(addr)
+        local a, b = parse_octets(addr)
+        if not a or a == 127 then return nil end
+        if a == 192 and b == 168 then return 400 end
+        if a == 10 then return 350 end
+        if a == 172 and b and b >= 16 and b <= 31 then return 300 end
+        if a == 169 and b == 254 then return 100 end
+        return 200
+    end
+
+    local best, best_score
+    for _, addr in ipairs(candidates) do
+        local s = score(addr)
+        if s and (not best_score or s > best_score) then
+            best, best_score = addr, s
+        end
+    end
+
+    return best
+end
+
+local function guess_broadcast(ip)
+    if type(ip) ~= "string" then return DEFAULT_BROADCAST end
+    local octets = {}
+    for part in ip:gmatch("%d+") do
+        octets[#octets + 1] = tonumber(part)
+    end
+    local a, b, c = octets[1], octets[2], octets[3]
+    if not (a and b and c) then return DEFAULT_BROADCAST end
+    if a == 127 or a >= 224 then return DEFAULT_BROADCAST end
+    return string.format("%d.%d.%d.255", a, b, c)
+end
+
+local function build_broadcast_targets(config_broadcast)
+    local targets = {}
+    local seen = {}
+
+    local function add(addr, source)
+        if not addr or addr == "" then return end
+        if not seen[addr] then
+            targets[#targets + 1] = { addr = addr, source = source }
+            seen[addr] = true
+        end
+    end
+
+    add(config_broadcast or DEFAULT_BROADCAST, "flag")
+
+    local local_ip = determine_local_ip()
+    if local_ip then
+        emit("config", "local-ip", { value = local_ip })
+    end
+    if local_ip then
+        add(guess_broadcast(local_ip), "derived")
+    end
+
+    if #targets == 0 then
+        add(DEFAULT_BROADCAST, "default")
+    end
+
+    return targets
+end
+
+local function receive_broadcast_event(discovery, config)
+    if not (discovery and discovery.udp) then return nil end
+    for _ = 1, UDP_RECEIVE_ATTEMPTS do
+        local data, ip, port = discovery.udp:receivefrom()
+        if not data then break end
+        local ok, payload = pcall(json.decode, data)
+        if ok and type(payload) == "table" then
+            if payload.type == "pong" then
+                return {
+                    payload = {
+                        device_id = payload.peer_id or payload.device_id or "unknown",
+                        udp_port = payload.port or config.udp_port,
+                        pong = true,
+                    },
+                    ip = ip,
+                    port = payload.port or port,
+                    raw_payload = payload,
+                    mode = BROADCAST_ONLY,
+                }
+            elseif payload.protocol == config.protocol and payload.device_id then
+                return {
+                    payload = payload,
+                    ip = ip,
+                    port = port,
+                    raw_payload = payload,
+                    mode = "discover",
+                }
+            end
+        end
+    end
+    return nil
 end
 
 local function determine_peer_id(sys_info)
@@ -225,7 +351,16 @@ local function run_simulation_join_room()
     })
 
     local discovery
-    local discovery_mode = is_multicast(config.broadcast) and "multicast" or BROADCAST_ONLY
+    local targets = build_broadcast_targets(config.broadcast)
+    if #targets == 0 then
+        emit("config", "error", { reason = "no_broadcast_targets" })
+    else
+        for idx, entry in ipairs(targets) do
+            emit("config", "target", { index = idx, addr = entry.addr, source = entry.source })
+        end
+    end
+    local primary_target = targets[1] and targets[1].addr or config.broadcast
+    local discovery_mode = is_multicast(primary_target) and "multicast" or BROADCAST_ONLY
     local ok, err = pcall(function()
         local discovery_opts = {
             port = config.udp_port,
@@ -238,7 +373,9 @@ local function run_simulation_join_room()
             },
             sys_info = sys_info,
         }
-        discovery_opts.multicast_addr = config.broadcast or discovery_opts.multicast_addr
+        if primary_target then
+            discovery_opts.multicast_addr = primary_target
+        end
         discovery = Discovery.new(discovery_opts)
         local ok_listen, listen_err = pcall(function()
             discovery:listen()
@@ -249,7 +386,7 @@ local function run_simulation_join_room()
             discovery:close()
             local fallback_udp = setup_broadcast_listener(config.udp_port)
             discovery.udp = fallback_udp
-            discovery.multicast_addr = config.broadcast or DEFAULT_BROADCAST
+            discovery.multicast_addr = primary_target or discovery.multicast_addr or DEFAULT_MULTICAST
         end
     end)
 
@@ -265,13 +402,34 @@ local function run_simulation_join_room()
     local function dispatch_probe(now)
         if now >= next_broadcast then
             discover_attempts = discover_attempts + 1
-            local ok_broadcast, broadcast_err = pcall(function()
-                discovery:broadcast_hello()
+            local ok_broadcast, broadcast_err
+            local message
+            ok_broadcast, broadcast_err = pcall(function()
+                message = discovery:broadcast_hello()
             end)
             if not ok_broadcast then
                 emit("discover", "error", { reason = broadcast_err or "broadcast_failed", attempt = discover_attempts })
             else
                 emit("discover", "sent", { attempt = discover_attempts })
+            end
+            if message then
+                for idx = 1, #targets do
+                    local addr = targets[idx].addr
+                    if idx > 1 or discovery_mode == BROADCAST_ONLY then
+                        local ok_extra, err_extra = pcall(function()
+                            local udp_extra = assert(socket.udp(), "unable to create UDP socket for broadcast target")
+                            udp_extra:setsockname("*", 0)
+                            udp_extra:setoption("broadcast", true)
+                            udp_extra:sendto(message, addr, config.udp_port)
+                            udp_extra:close()
+                        end)
+                        if not ok_extra then
+                            emit("discover", "error", { reason = err_extra or "broadcast_failed", attempt = discover_attempts, target = addr })
+                        else
+                            emit("discover", "sent", { attempt = discover_attempts, target = addr })
+                        end
+                    end
+                end
             end
             if discovery_mode == BROADCAST_ONLY then
                 local ping_payload = json.encode({
@@ -279,16 +437,15 @@ local function run_simulation_join_room()
                     peer_id = peer_id,
                     timestamp = socket.gettime(),
                 })
-                local targets = { config.broadcast or DEFAULT_BROADCAST }
-                for _, addr in ipairs(targets) do
+                for _, target in ipairs(targets) do
+                    local addr = target.addr
                     local ok_ping, ping_err = pcall(function()
                         return discovery.udp:sendto(ping_payload, addr, config.udp_port)
                     end)
                     if ok_ping then
-                        emit("discover", "sent", { attempt = discover_attempts, mode = BROADCAST_ONLY, payload = "ping" })
-                        break
+                        emit("discover", "sent", { attempt = discover_attempts, mode = BROADCAST_ONLY, payload = "ping", target = addr })
                     else
-                        emit("discover", "error", { reason = ping_err or "ping_failed", attempt = discover_attempts, payload = "ping" })
+                        emit("discover", "error", { reason = ping_err or "ping_failed", attempt = discover_attempts, payload = "ping", target = addr })
                     end
                 end
             end
@@ -308,7 +465,13 @@ local function run_simulation_join_room()
 
         dispatch_probe(now)
 
-        local event = discovery:receive()
+        local event
+        if discovery_mode == BROADCAST_ONLY then
+            event = receive_broadcast_event(discovery, config)
+        end
+        if not event then
+            event = discovery:receive()
+        end
         if event then
             emit("discover", "match", {
                 peer = event.payload and event.payload.device_id or "unknown",

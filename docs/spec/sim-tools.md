@@ -60,6 +60,7 @@ During the initial phase the simulation tools mirror the production Create Room 
 - When discovery runs outside Defold, fall back to broadcast-only mode if joining the multicast group fails so the simulators stay aligned with the current runtime behaviour.
 - Emit `TRACE|sim.client|discover|warn|mode=broadcast-only` when multicast setup fails so operators understand the CLI is running in degraded mode.
 - In broadcast-only mode the client sends both the simulator `HELLO` payload and the runtime-compatible `ping` message each cycle so existing Defold hosts reply without protocol changes.
+- Broadcast fallback also listens for Defold `pong` replies and treats them as discovery matches so the TCP join handshake can proceed even without multicast.
 - Runtime builds must publish a routable local IP before broadcasting; when the device reports multiple aliases, prefer RFC1918 ranges (`192.168.*` → `10.*` → `172.16–31.*`) ahead of VPN or link-local addresses so remote peers can see the host.
 - Coordinate the self-test via shell scripts—run the room server harness and the join harness from terminals using the wrappers listed below. HUD interactions stay optional for manual observation only.
   - `./scripts/run-room-server.sh --duration 5`
