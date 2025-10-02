@@ -41,9 +41,31 @@ local function state_hash(state)
 end
 
 local function determine_local_ip()
-    local function pick_candidate(value)
-        if type(value) == "string" and value ~= "" and value ~= "127.0.0.1" then
-            return value
+    local function parse_octets(addr)
+        if type(addr) ~= "string" then return nil end
+        local a, b, c, d = addr:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
+        if not a then return nil end
+        return tonumber(a), tonumber(b), tonumber(c), tonumber(d)
+    end
+
+    local function candidate_priority(addr)
+        local a, b = parse_octets(addr)
+        if not a then return nil end
+        if a == 127 then return nil end
+        if a == 192 and b == 168 then return 400 end
+        if a == 10 then return 350 end
+        if a == 172 and b and b >= 16 and b <= 31 then return 300 end
+        if a == 169 and b == 254 then return 50 end -- link-local; keep as last resort
+        return 200
+    end
+
+    local function collect(values, out)
+        if type(values) == "string" then
+            out[#out + 1] = values
+        elseif type(values) == "table" then
+            for _, entry in ipairs(values) do
+                collect(entry, out)
+            end
         end
     end
 
@@ -51,25 +73,24 @@ local function determine_local_ip()
         local hostname = dns.gethostname()
         if hostname then
             local primary, details = dns.toip(hostname)
+            local candidates = {}
+            collect(primary, candidates)
             if details and type(details) == "table" then
-                local aliases = details.ip or details.alias or {}
-                if type(aliases) == "string" then
-                    local candidate = pick_candidate(aliases)
-                    if candidate then
-                        return candidate
-                    end
-                elseif type(aliases) == "table" then
-                    for _, entry in ipairs(aliases) do
-                        local candidate = pick_candidate(entry)
-                        if candidate then
-                            return candidate
-                        end
-                    end
+                if details.ip then collect(details.ip, candidates) end
+                if details.alias then collect(details.alias, candidates) end
+            end
+
+            local chosen, best_priority
+            for _, addr in ipairs(candidates) do
+                local score = candidate_priority(addr)
+                if score and (not best_priority or score > best_priority) then
+                    chosen = addr
+                    best_priority = score
                 end
             end
-            local candidate = pick_candidate(primary)
-            if candidate then
-                return candidate
+
+            if chosen then
+                return chosen
             end
         end
     end

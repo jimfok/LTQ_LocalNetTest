@@ -58,7 +58,9 @@ During the initial phase the simulation tools mirror the production Create Room 
 - Emit lightweight console logs in `main/main.script` (e.g. `TRACE|sim-tools|simulation-created-room|ok`) when HUD-driven flows fire so developers can correlate actions while debugging without new telemetry pipelines. These logs remain read-only touchpoints for simulators.
 - Simulator scripts emit structured lines (`TRACE|sim.server|…`, `TRACE|sim.client|…`) that capture action, status, and key metadata (`port`, `roomId`, `peer`). Keep both log families stable to support manual runs and future automation.
 - When discovery runs outside Defold, fall back to broadcast-only mode if joining the multicast group fails so the simulators stay aligned with the current runtime behaviour.
-- Runtime builds must publish a routable local IP before broadcasting; when the device reports a loopback address, resolve aliases (via `socket.dns.toip`) and prefer the first non-`127.0.0.1` candidate so remote peers can see the host.
+- Emit `TRACE|sim.client|discover|warn|mode=broadcast-only` when multicast setup fails so operators understand the CLI is running in degraded mode.
+- In broadcast-only mode the client sends both the simulator `HELLO` payload and the runtime-compatible `ping` message each cycle so existing Defold hosts reply without protocol changes.
+- Runtime builds must publish a routable local IP before broadcasting; when the device reports multiple aliases, prefer RFC1918 ranges (`192.168.*` → `10.*` → `172.16–31.*`) ahead of VPN or link-local addresses so remote peers can see the host.
 - Coordinate the self-test via shell scripts—run the room server harness and the join harness from terminals using the wrappers listed below. HUD interactions stay optional for manual observation only.
   - `./scripts/run-room-server.sh --duration 5`
   - `./scripts/run-room-client.sh --duration 5`

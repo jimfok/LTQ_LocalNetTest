@@ -81,6 +81,37 @@ local DEFAULT_PROTOCOL = "localsend"
 local BROADCAST_INTERVAL = 1.0
 local POLL_INTERVAL = 0.1
 local TCP_TIMEOUT = 3
+local BROADCAST_ONLY = "broadcast-only"
+
+local function is_multicast(addr)
+    if not addr then return false end
+    local first_octet = tonumber(addr:match("^(%d+)"))
+    return first_octet ~= nil and first_octet >= 224 and first_octet <= 239
+end
+
+local function setup_broadcast_listener(port)
+    local udp = assert(socket.udp(), "unable to create UDP socket for broadcast listener")
+    udp:settimeout(0)
+    udp:setoption("reuseaddr", true)
+    local reuseport_ok, reuseport_err = udp:setoption("reuseport", true)
+    if not reuseport_ok and reuseport_err and reuseport_err ~= "Option not supported" then
+        -- proceed; reuseport is not required on all platforms
+    end
+
+    local ok_bind, bind_err = udp:setsockname("*", port)
+    if not ok_bind then
+        udp:close()
+        error(string.format("broadcast_listen_failed:%s", bind_err or "bind_error"))
+    end
+
+    local ok_broadcast, broadcast_err = udp:setoption("broadcast", true)
+    if not ok_broadcast then
+        udp:close()
+        error(string.format("broadcast_flag_failed:%s", broadcast_err or "setoption_error"))
+    end
+
+    return udp
+end
 
 local function emit(action, status, fields)
     local line = Logging.trace("sim.client", action, status, fields)
@@ -121,14 +152,7 @@ local function parse_args(argv)
         i = i + 1
     end
 
-    local function in_multicast_range(address)
-        if not address then return false end
-        local first_octet = address:match("^(%d+)")
-        local first = tonumber(first_octet)
-        return first ~= nil and first >= 224 and first <= 239
-    end
-
-    if config.broadcast and in_multicast_range(config.broadcast) then
+    if config.broadcast and is_multicast(config.broadcast) then
         config.discovery_addr = config.broadcast
     end
 
@@ -201,6 +225,7 @@ local function run_simulation_join_room()
     })
 
     local discovery
+    local discovery_mode = is_multicast(config.broadcast) and "multicast" or BROADCAST_ONLY
     local ok, err = pcall(function()
         local discovery_opts = {
             port = config.udp_port,
@@ -213,23 +238,18 @@ local function run_simulation_join_room()
             },
             sys_info = sys_info,
         }
-        if config.discovery_addr then
-            discovery_opts.multicast_addr = config.discovery_addr
-        elseif config.broadcast then
-            emit("config", "fallback", {
-                broadcast = config.broadcast,
-                multicast = discovery_opts.multicast_addr or DEFAULT_BROADCAST,
-            })
-        end
+        discovery_opts.multicast_addr = config.broadcast or discovery_opts.multicast_addr
         discovery = Discovery.new(discovery_opts)
         local ok_listen, listen_err = pcall(function()
             discovery:listen()
         end)
         if not ok_listen then
-            emit("discover", "error", { reason = listen_err or "listen_failed" })
+            discovery_mode = BROADCAST_ONLY
+            emit("discover", "warn", { reason = listen_err or "listen_failed", mode = BROADCAST_ONLY })
             discovery:close()
-            discovery = nil
-            return
+            local fallback_udp = setup_broadcast_listener(config.udp_port)
+            discovery.udp = fallback_udp
+            discovery.multicast_addr = config.broadcast or DEFAULT_BROADCAST
         end
     end)
 
@@ -242,7 +262,7 @@ local function run_simulation_join_room()
     local next_broadcast = start_time
     local discover_attempts = 0
 
-    local function maybe_broadcast(now)
+    local function dispatch_probe(now)
         if now >= next_broadcast then
             discover_attempts = discover_attempts + 1
             local ok_broadcast, broadcast_err = pcall(function()
@@ -252,6 +272,25 @@ local function run_simulation_join_room()
                 emit("discover", "error", { reason = broadcast_err or "broadcast_failed", attempt = discover_attempts })
             else
                 emit("discover", "sent", { attempt = discover_attempts })
+            end
+            if discovery_mode == BROADCAST_ONLY then
+                local ping_payload = json.encode({
+                    type = "ping",
+                    peer_id = peer_id,
+                    timestamp = socket.gettime(),
+                })
+                local targets = { config.broadcast or DEFAULT_BROADCAST }
+                for _, addr in ipairs(targets) do
+                    local ok_ping, ping_err = pcall(function()
+                        return discovery.udp:sendto(ping_payload, addr, config.udp_port)
+                    end)
+                    if ok_ping then
+                        emit("discover", "sent", { attempt = discover_attempts, mode = BROADCAST_ONLY, payload = "ping" })
+                        break
+                    else
+                        emit("discover", "error", { reason = ping_err or "ping_failed", attempt = discover_attempts, payload = "ping" })
+                    end
+                end
             end
             next_broadcast = now + BROADCAST_INTERVAL
         end
@@ -267,7 +306,7 @@ local function run_simulation_join_room()
             break
         end
 
-        maybe_broadcast(now)
+        dispatch_probe(now)
 
         local event = discovery:receive()
         if event then
