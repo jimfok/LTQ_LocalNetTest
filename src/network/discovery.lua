@@ -99,8 +99,17 @@ end
 function Discovery:broadcast_hello()
     local udp = assert(self.deps.socket.udp(), "unable to create UDP socket for broadcast")
     udp:setsockname("*", 0)
-    udp:setoption("ip-multicast-ttl", 1)
-    udp:setoption("ip-multicast-loop", true)
+    if self.multicast_addr and self.multicast_addr:match("^(%d+)") then
+        local first_octet = tonumber(self.multicast_addr:match("^(%d+)"))
+        if first_octet and first_octet >= 224 and first_octet <= 239 then
+            udp:setoption("ip-multicast-ttl", 1)
+            udp:setoption("ip-multicast-loop", true)
+        else
+            udp:setoption("broadcast", true)
+        end
+    else
+        udp:setoption("broadcast", true)
+    end
 
     local payload = {
         device_id = self.sys_info.device_id,
