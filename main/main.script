@@ -162,6 +162,19 @@ local function stop_server(self)
         self.server_udp:close()
         self.server_udp = nil
     end
+    if self.server_tcp then
+        self.server_tcp:close()
+        self.server_tcp = nil
+    end
+    if self.server_tcp_clients then
+        for _, client in ipairs(self.server_tcp_clients) do
+            if client.sock then
+                client.sock:close()
+            end
+        end
+        self.server_tcp_clients = {}
+    end
+    self.tcp_port = nil
 end
 
 local function stop_client(self)
@@ -201,6 +214,18 @@ local function start_server(self)
     end
     set_status(STATE_CREATE, status)
     push_log(STATE_CREATE, "info", "system", status)
+
+    local tcp, tcp_err = socket.bind("*", 0)
+    if not tcp then
+        push_log(STATE_CREATE, "info", "system", "TCP host unavailable: " .. tostring(tcp_err))
+        return
+    end
+    tcp:settimeout(0)
+    self.server_tcp = tcp
+    self.server_tcp_clients = {}
+    local _, tcp_port = tcp:getsockname()
+    self.tcp_port = tcp_port
+    push_log(STATE_CREATE, "info", "system", string.format("TCP ready on %s:%d", self.local_ip or "*", tcp_port))
 end
 
 local function start_client(self)
@@ -294,6 +319,7 @@ local function poll_server(self)
                 type = "pong",
                 peer_id = self.peer_id,
                 port = UDP_PORT,
+                tcp_port = self.tcp_port,
                 timestamp = socket.gettime(),
             })
             local sent, err = udp:sendto(response, ip, port)
@@ -302,6 +328,48 @@ local function poll_server(self)
             else
                 push_log(STATE_CREATE, "out", peer_label, "pong")
             end
+        end
+    end
+
+    local tcp = self.server_tcp
+    if not tcp then return end
+
+    while true do
+        local client = tcp:accept()
+        if not client then break end
+        client:settimeout(0)
+        local ip_addr, ip_port = client:getpeername()
+        push_log(STATE_CREATE, "in", format_peer(nil, ip_addr, ip_port), "tcp-connect")
+        self.server_tcp_clients[#self.server_tcp_clients + 1] = {
+            sock = client,
+            ip = ip_addr,
+            port = ip_port,
+        }
+    end
+
+    for i = #self.server_tcp_clients, 1, -1 do
+        local client = self.server_tcp_clients[i]
+        local line, err = client.sock:receive("*l")
+        if line then
+            local ok, payload = pcall(json.decode, line)
+            local peer_label = format_peer(payload and payload.peer_id, client.ip, client.port)
+            if not ok or type(payload) ~= "table" then
+                push_log(STATE_CREATE, "info", peer_label, "invalid join payload")
+            else
+                push_log(STATE_CREATE, "in", peer_label, "join")
+            end
+            local response = json.encode({
+                status = "Accept",
+                roomId = 1,
+                players = {},
+            })
+            client.sock:send(response .. "\n")
+            push_log(STATE_CREATE, "out", peer_label, "accept")
+            client.sock:close()
+            table.remove(self.server_tcp_clients, i)
+        elseif err == "closed" then
+            client.sock:close()
+            table.remove(self.server_tcp_clients, i)
         end
     end
 end
@@ -364,6 +432,9 @@ function init(self)
     self.splash_elapsed = 0
     self.server_udp = nil
     self.client_udp = nil
+    self.server_tcp = nil
+    self.server_tcp_clients = {}
+    self.tcp_port = nil
     self.local_ip = determine_local_ip()
     self.broadcast_addr = guess_broadcast(self.local_ip)
 
