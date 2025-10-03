@@ -1,5 +1,12 @@
 # Welcome to Defold
 
+## Quick Links
+- [Agent Operating Modes](AGENTS.md)
+- [Authoritative Specs (`spec/`)](spec)
+- [Active Tasks (`plan/TASKS.md`)](plan/TASKS.md)
+- [Design Decisions (`docs/ADRs/`)](docs/ADRs)
+- [Evergreen Principles](docs/principles.md)
+
 This project was created from the "mobile" project template. This means that the settings in ["game.project"](defold://open?path=/game.project) have been changed to be suitable for a mobile game:
 
 - The screen size is set to 640x1136
