@@ -7,9 +7,9 @@
 - When creating branches from the Codex CLI agent, use the naming pattern `feature/<topic>` to keep automation and reviews consistent.
 
 ## AI Agent Alignment & Traceability
-- Treat every change as agent-executable: note intent before coding in `README.md`, `docs/plan/`, or `docs/spec/` so Qwen 30B Instruct and local runners inherit the same playbook.
+- Treat every change as agent-executable: note intent before coding in `README.md`, `plan/`, or `spec/` so Qwen 30B Instruct and local runners inherit the same playbook.
 - Leave structured breadcrumbs—update test descriptions, commit messages, and inline comments with the feature or spec ID (`spec:<topic>`) so generated traces stay searchable.
-- Sync scenario outlines between `docs/spec/` and the matching `tests/<domain>` files; cross-link the doc in the spec header for quick pivots between design and execution.
+- Sync scenario outlines between `spec/` and the matching `tests/<domain>` files; cross-link the doc in the spec header for quick pivots between design and execution.
 - Keep reusable automation logic in `src/` or `tools/` and expose deterministic entrypoints (`scripts/*.sh`, `tests/support/*.lua`) that agents can invoke without manual tweaking.
 - Prefer hermetic logging over ad-hoc prints. When adding new scripts, emit machine-readable lines (e.g. `TRACE|component|action|status`) to help downstream agents audit execution.
 - When handing off in-progress work to executor agents, capture the active branch, open tasks, and required commands at the top of the relevant doc to maintain continuity.
@@ -17,9 +17,9 @@
 ## Spec-Driven Project Layout
 - Start with executable specs. Mirror directories under `tests/` with their runtime counterparts (`tests/network` ↔ `src/network`) so coverage stays discoverable.
 - Extend `tests/support/` helpers instead of duplicating setup logic in specs; keep fixtures side-effect free and document new helpers with usage notes at the top of the file.
-- Record scenario outlines in `docs/spec/` when behaviour crosses modules, then link those outlines from the related test files and update `docs/tasks/` for any follow-up work.
+- Record scenario outlines in `spec/` when behaviour crosses modules, then link those outlines from the related test files and update `plan/tasks/` for any follow-up work.
 - When adding new root-level code paths, add matching smoke scripts under `scripts/` and mention how to trigger them in `README.md` so remote agents can run verifications end-to-end.
-- Update `docs/plan/` when creating iteration roadmaps and close the loop by referencing the plan in the corresponding specs and commits (`spec:<topic>` tag).
+- Update `plan/` when creating iteration roadmaps and close the loop by referencing the plan in the corresponding specs and commits (`spec:<topic>` tag).
 
 ## Execution Playbook
 - Install LuaRocks + Busted (`luarocks --lua-version=5.1 --lua-interpreter=luajit install busted --local`) before running specs locally or via remote agents.
