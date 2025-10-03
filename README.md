@@ -26,18 +26,18 @@ The file `src/network/discovery.lua` sets up a multicast UDP listener and broadc
 
 ### Room simulator workflows (spec:sim-tools)
 
-- Follow `docs/spec/sim-tools.md` for full requirements and logging expectations that keep the simulators aligned with runtime logic.
+- Follow `spec/sim-tools.md` for full requirements and logging expectations that keep the simulators aligned with runtime logic.
 - The server-room harness (to be exposed as `scripts/run-room-server.sh`) bootstraps `RoomServer` with deterministic flags like `--port`, `--room-id`, and `--duration`, then emits machine-readable lines such as `TRACE|sim.server|start|ok|port=47001 roomId=3`.
 - The join-room harness (planned as `scripts/run-room-client.sh`) reuses `Discovery` probes to broadcast, auto-match servers, and report progress via `TRACE|sim.client|discover|sent` / `TRACE|sim.client|join|accept|roomId=...`.
-- Use these simulators to validate create/join flows on a single machine while other devices or agents are offline; capture follow-up tasks in `docs/tasks/2025-09-29-sim-tools.md` when behaviour evolves.
+- Use these simulators to validate create/join flows on a single machine while other devices or agents are offline; capture follow-up tasks in `plan/tasks/2025-09-29-sim-tools.md` when behaviour evolves.
 
 ## Spec-driven architecture
 
 Spec-driven, AI-assited workflow's alignment
-Spec -> baseline requirements, under `docs/spec`
-Plan -> iteration steps for AI/agents, under `docs/plan`
-Tasks -> bite-size actionable units, sometimes auto-generated from plan, under `docs/tasks`
-ADRs -> gauardrails and historical reasoning, under `docs/adrs`
+Spec -> baseline requirements, under `spec`
+Plan -> iteration steps for AI/agents, under `plan`
+Tasks -> bite-size actionable units, sometimes auto-generated from plan, under `plan/tasks`
+ADRs -> gauardrails and historical reasoning, under `docs/ADRs`
 
 - Network code now lives under `src/network`, making it reusable from both runtime scripts and unit specs.
 - `main/main.script` creates a `Discovery` instance, which exposes `listen`, `broadcast_hello`, `receive`, and `close` instance methods.
@@ -48,7 +48,7 @@ ADRs -> gauardrails and historical reasoning, under `docs/adrs`
 
 ### Tests vs specs
 
-- Prefer authoring unit and behaviour specs under `tests/`; `docs/spec/` stores narrative outlines that feed those executables, while integration harnesses can grow alongside them when needed.
+- Prefer authoring unit and behaviour specs under `tests/`; `spec/` stores narrative outlines that feed those executables, while integration harnesses can grow alongside them when needed.
 - Run the full networking spec suite with `./scripts/test-network.sh`, or pass individual files/dirs to `./scripts/test.sh` for focused runs.
 
 ## Development workflow

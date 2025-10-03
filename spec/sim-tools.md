@@ -2,18 +2,18 @@
 - Spec ID: spec:sim-tools
 - Status: Draft
 - Owner: Agent session 2025-09-29
-- Linked Plan: docs/plan/2025-09-29-sim-tools.md (active iteration), docs/plan/2025-09-30-sim-tools.md (historical checkpoints)
-- Linked Tasks: docs/tasks/2025-09-29-sim-tools.md, docs/tasks/2025-09-30-sim-tools.md
+- Linked Plan: plan/2025-09-29-sim-tools.md (active iteration), plan/2025-09-30-sim-tools.md (historical checkpoints)
+- Linked Tasks: plan/tasks/2025-09-29-sim-tools.md, plan/tasks/2025-09-30-sim-tools.md
 - Linked Tests: tests/sim-tools/simulation_created_room_spec.lua (S1), tests/sim-tools/simulation_join_room_spec.lua (S2)
 
 ## Overview
-This spec clarifies the behaviour of the simulation tooling workflows so that developers can reliably reproduce and debug matchmaking flows without live players. The active roadmap lives in [docs/plan/2025-09-29-sim-tools.md](../plan/2025-09-29-sim-tools.md) and builds on the earlier checkpoints in [docs/plan/2025-09-30-sim-tools.md](../plan/2025-09-30-sim-tools.md). Guidance captured on the `feature/sim-tools-requirements` branch is folded into this document so the active plan and historical expectations stay in one place.
+This spec clarifies the behaviour of the simulation tooling workflows so that developers can reliably reproduce and debug matchmaking flows without live players. The active roadmap lives in [plan/2025-09-29-sim-tools.md](../plan/2025-09-29-sim-tools.md) and builds on the earlier checkpoints in [plan/2025-09-30-sim-tools.md](../plan/2025-09-30-sim-tools.md). Guidance captured on the `feature/sim-tools-requirements` branch is folded into this document so the active plan and historical expectations stay in one place.
 
 ## Current Status (2025-09-29 validation reset)
 - CLI, harness, and logging scaffolding were temporarily removed while we re-align the placeholder structure with documentation.
 - Scenario S1 (Simulation-Created Room) remains satisfied by running the Defold game build and using the in-game **Create Room** flow; a standalone CLI host will be reintroduced during the follow-up milestone.
 - Scenario S2 (Simulation-Join Room) is the active milestone: rebuild the CLI join harness so it can connect to the in-game host without modifying HUD assets.
-- Follow the reconciliation checklist in [docs/plan/checklists/sim-tools-validation.md](../plan/checklists/sim-tools-validation.md) before re-creating any modules. New files should start as comment-only pseudo-code so future TODOs stay scoped to functions.
+- Follow the reconciliation checklist in [plan/checklists/sim-tools-validation.md](../plan/checklists/sim-tools-validation.md) before re-creating any modules. New files should start as comment-only pseudo-code so future TODOs stay scoped to functions.
 - Wrapper scripts `scripts/run-room-server.sh` / `scripts/run-room-client.sh` remain pending. Use the echo-only stubs in `scripts/sim-tools/` until the CLI bridge is restored through the documented plan.
 
 ## Purpose
@@ -30,7 +30,7 @@ Give developers single-machine room workflow coverage by adding CLI-driven simul
 ## Spec ↔ Code Map
 - **Simulator Harnesses**: `src/sim-tools/simulation_created_room.lua` and `src/sim-tools/simulation_join_room.lua` are the single entry points for automation. Both files tag TODOs with `spec:sim-tools` so follow-up work can reference this spec when wiring CLI flags, TRACE logging, and graceful shutdown logic.
 - **Behaviour Specs**: `tests/sim-tools/simulation_created_room_spec.lua` (Scenario S1) and `tests/sim-tools/simulation_join_room_spec.lua` (Scenario S2) mirror the simulator expectations. Keep describe blocks referencing `spec:sim-tools` for traceability when adding new assertions.
-- **Plans & Tasks**: `docs/plan/2025-09-29-sim-tools.md` and `docs/tasks/2025-09-29-sim-tools.md` must refer to the simulator harness names above to avoid drift between planning notes and executable code.
+- **Plans & Tasks**: `plan/2025-09-29-sim-tools.md` and `plan/tasks/2025-09-29-sim-tools.md` must refer to the simulator harness names above to avoid drift between planning notes and executable code.
 
 ## Requirements
 ### R1: Server-room simulator (spec:sim-tools)
@@ -49,7 +49,7 @@ Give developers single-machine room workflow coverage by adding CLI-driven simul
 ## Terminology & Isolation Updates
 - Keep the shipping HUD labels (**Create Room**, **Join Room**) untouched; simulator naming lives in CLI help text and documentation.
 - Refer to CLI harnesses as **Simulation-Created Room** and **Simulation-Join Room** in docs, scripts, and tests to distinguish them from the HUD flows without altering UI assets.
-- Document any simulator terminology changes inside `docs/spec/` and CLI usage strings instead of modifying `main/ui.gui` resources.
+- Document any simulator terminology changes inside `spec/` and CLI usage strings instead of modifying `main/ui.gui` resources.
 
 ## Proof-of-Concept Scope
 During the initial phase the simulation tools mirror the production Create Room / Join Room flows without requiring real player clients. Simulator entry points operate purely from shell scripts that spawn the harness loops; no simulator work injects messages into HUD scripts or rebinds GUI nodes. The join harness (S2) is the only CLI component being rebuilt immediately—developers should run the Defold **Create Room** flow to satisfy S1 until the follow-up CLI host lands.
@@ -100,7 +100,7 @@ During the initial phase the simulation tools mirror the production Create Room 
 ### Simulation tooling self-test (join-first MVP)
 1. Launch the Defold game build, trigger **Create Room**, and keep the host running in one terminal or window.
 2. Execute `scripts/run-room-client.sh --duration 3 --broadcast 255.255.255.255` from another terminal to run the join harness and observe `TRACE|sim.client|…` logs.
-3. Verify that the join CLI connects successfully, capturing outcomes in `docs/tasks/2025-09-30-sim-tools.md` and `docs/tasks/2025-09-29-sim-tools.md`. The follow-up milestone will expand this smoke to include the standalone CLI host.
+3. Verify that the join CLI connects successfully, capturing outcomes in `plan/tasks/2025-09-30-sim-tools.md` and `plan/tasks/2025-09-29-sim-tools.md`. The follow-up milestone will expand this smoke to include the standalone CLI host.
 
 ## Validation Checklist
 - [ ] Simulator terminology appears in CLI help text and docs only; HUD labels remain unchanged.
@@ -108,4 +108,4 @@ During the initial phase the simulation tools mirror the production Create Room 
 - [ ] Lightweight `TRACE|sim-tools|…` and CLI `TRACE|sim.*|…` console entries are emitted when simulator scripts run their harness loops.
 - [ ] Developers can execute the scenarios above without manual data setup and can rely on the linked task trackers to log outcomes.
 - [ ] Future spec updates synchronise with the listed plan, task, and test documents so executor agents inherit the same expectations.
-- [ ] `src/sim-tools/` harness names and `tests/sim-tools/` spec filenames stay aligned with `docs/plan/2025-09-29-sim-tools.md` and `docs/tasks/2025-09-29-sim-tools.md` references.
+- [ ] `src/sim-tools/` harness names and `tests/sim-tools/` spec filenames stay aligned with `plan/2025-09-29-sim-tools.md` and `plan/tasks/2025-09-29-sim-tools.md` references.

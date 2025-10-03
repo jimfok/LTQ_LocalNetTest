@@ -4,7 +4,7 @@
 ## Summary
 - Clarified AGENT guidance to align with updated README and Qwen 30B executor workflows.
 - Relocated Busted specs and helpers from `spec/` to `tests/`, updating harness scripts and documentation.
-- Captured the structural shift in `docs/adr/0001-move-busted-specs-to-tests.md` and verified the suite with `./scripts/test.sh`.
+- Captured the structural shift in `docs/ADRs/0001-move-busted-specs-to-tests.md` and verified the suite with `./scripts/test.sh`.
 - Created branch `feature/tests-relocation` for ongoing work.
 
 ## Follow-ups
