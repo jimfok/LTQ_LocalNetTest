@@ -3,6 +3,56 @@ local json = require "json"
 local socket = require "socket"
 local dns = socket.dns
 
+local LOG_FILE_SETTING = os.getenv("SIM_TOOLS_LOG_FILE")
+if not LOG_FILE_SETTING or LOG_FILE_SETTING == "" then
+    LOG_FILE_SETTING = sys.get_config("sim_tools.log_file")
+end
+
+local log_file_handle = nil
+local log_file_path = nil
+
+local function normalise_log_path(setting)
+    if not setting or setting == "" then return nil end
+    local normalised = string.lower(setting)
+    if normalised == "1" or normalised == "true" or normalised == "default" then
+        return sys.get_save_file("sim-tools", "console.log")
+    end
+    return setting
+end
+
+local function ensure_log_file()
+    if log_file_handle or not LOG_FILE_SETTING then
+        return log_file_handle
+    end
+    local path = normalise_log_path(LOG_FILE_SETTING)
+    if not path then
+        return nil
+    end
+    local file, err = io.open(path, "a")
+    if not file then
+        print(string.format("[WARN] Unable to open log file %s: %s", path, err or "unknown"))
+        LOG_FILE_SETTING = nil
+        return nil
+    end
+    log_file_path = path
+    log_file_handle = file
+    file:write(string.format("--- sim-tools log start %s ---\n", os.date("%Y-%m-%d %H:%M:%S")))
+    file:flush()
+    return log_file_handle
+end
+
+local function write_log_file(channel, direction, peer_label, message)
+    local file = ensure_log_file()
+    if not file then return end
+    file:write(string.format("%s\t%s\t%s\t%s\t%s\n",
+        os.date("%Y-%m-%dT%H:%M:%S"),
+        channel or "-",
+        direction or "-",
+        peer_label or "-",
+        message or ""))
+    file:flush()
+end
+
 local UI_URL = msg.url("main:/go#ui")
 
 math.randomseed(os.time())
@@ -128,6 +178,7 @@ local function push_log(channel, direction, peer_label, message)
     local timestamp = os.date("%H:%M:%S")
     local line = string.format("[%s] %s %s %s", timestamp, prefix, peer_label or "-", message or "")
     UiModel.append_log(channel, line)
+    write_log_file(channel, direction, peer_label, message)
     local state = state_hash(channel)
     if state then
         msg.post(UI_URL, HASH_LOGS_UPDATED, { state = state })
@@ -489,6 +540,12 @@ end
 
 function final(self)
     exit_state(self, self.state)
+    if log_file_handle then
+        log_file_handle:write(string.format("--- sim-tools log end %s ---\n", os.date("%Y-%m-%d %H:%M:%S")))
+        log_file_handle:flush()
+        log_file_handle:close()
+        log_file_handle = nil
+    end
 end
 
 function on_message(self, message_id, message, sender)

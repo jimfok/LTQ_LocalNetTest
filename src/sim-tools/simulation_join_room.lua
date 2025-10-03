@@ -84,6 +84,7 @@ local POLL_INTERVAL = 0.1
 local TCP_TIMEOUT = 3
 local BROADCAST_ONLY = "broadcast-only"
 local UDP_RECEIVE_ATTEMPTS = 8
+local DEBUG_DISCOVERY = os.getenv("SIM_TOOLS_DEBUG_DISCOVERY") == "1"
 
 local function is_multicast(addr)
     if not addr then return false end
@@ -239,14 +240,21 @@ local function build_broadcast_targets(config_broadcast)
 
     local local_ip = determine_local_ip()
     if local_ip then
-        emit("config", "local-ip", { value = local_ip })
-    end
-    if local_ip then
         add(guess_broadcast(local_ip), "derived")
+        if DEBUG_DISCOVERY then
+            emit("config", "local-ip", { value = local_ip })
+        end
     end
 
     if #targets == 0 then
         add(DEFAULT_BROADCAST, "default")
+        if DEBUG_DISCOVERY then
+            emit("config", "error", { reason = "no_broadcast_targets" })
+        end
+    elseif DEBUG_DISCOVERY then
+        for idx, entry in ipairs(targets) do
+            emit("config", "target", { index = idx, addr = entry.addr, source = entry.source })
+        end
     end
 
     return targets
@@ -356,11 +364,13 @@ local function run_simulation_join_room()
 
     local discovery
     local targets = build_broadcast_targets(config.broadcast)
-    if #targets == 0 then
-        emit("config", "error", { reason = "no_broadcast_targets" })
-    else
-        for idx, entry in ipairs(targets) do
-            emit("config", "target", { index = idx, addr = entry.addr, source = entry.source })
+    if DEBUG_DISCOVERY then
+        if #targets == 0 then
+            emit("config", "error", { reason = "no_broadcast_targets" })
+        else
+            for idx, entry in ipairs(targets) do
+                emit("config", "target", { index = idx, addr = entry.addr, source = entry.source })
+            end
         end
     end
     local primary_target = targets[1] and targets[1].addr or config.broadcast

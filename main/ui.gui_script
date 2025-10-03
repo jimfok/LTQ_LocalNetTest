@@ -6,9 +6,9 @@ local PANEL_COLOR = vmath.vector4(0.07, 0.09, 0.12, 0.82)
 local TEXT_COLOR = vmath.vector4(0.92, 0.96, 1.0, 1.0)
 local TEXT_SECONDARY_COLOR = vmath.vector4(0.65, 0.72, 0.82, 1.0)
 local STATUS_COLOR = vmath.vector4(0.78, 0.84, 0.92, 1.0)
-local PANEL_PADDING = 28
-local PANEL_HEIGHT_RATIO = 0.46
-local PANEL_WIDTH_RATIO = 0.72
+local PANEL_PADDING = 32
+local PANEL_HEIGHT_RATIO = 0.60
+local PANEL_WIDTH_RATIO = 0.80
 local BUTTON_HEIGHT = 90
 local BUTTON_WIDTH_RATIO = 0.46
 
@@ -200,12 +200,16 @@ local function build_layout(self)
         nodes[#nodes + 1] = peer
         self.create_peer_node = peer
 
-        local status = new_label(self, "", vmath.vector3(panel_left, panel_top - 34, 0), TEXT_SECONDARY_COLOR, gui.PIVOT_NW)
+        local status = new_label(self, "", vmath.vector3(panel_left, panel_top - 40, 0), TEXT_SECONDARY_COLOR, gui.PIVOT_NW)
+        gui.set_size(status, vmath.vector3(panel_width - PANEL_PADDING * 2, 96, 0))
         nodes[#nodes + 1] = status
         self.create_status_node = status
 
-        local log_text = new_label(self, "", vmath.vector3(panel_left, panel_top - 108, 0), TEXT_COLOR, gui.PIVOT_NW)
+        local log_top = panel_top - 124
+        local log_height = panel_height - 196
+        local log_text = new_label(self, "", vmath.vector3(panel_left, log_top, 0), TEXT_COLOR, gui.PIVOT_NW)
         gui.set_line_break(log_text, true)
+        gui.set_size(log_text, vmath.vector3(panel_width - PANEL_PADDING * 2, log_height, 0))
         nodes[#nodes + 1] = log_text
         self.create_log_node = log_text
 
@@ -232,12 +236,16 @@ local function build_layout(self)
         nodes[#nodes + 1] = peer
         self.join_peer_node = peer
 
-        local status = new_label(self, "", vmath.vector3(panel_left, panel_top - 34, 0), TEXT_SECONDARY_COLOR, gui.PIVOT_NW)
+        local status = new_label(self, "", vmath.vector3(panel_left, panel_top - 40, 0), TEXT_SECONDARY_COLOR, gui.PIVOT_NW)
+        gui.set_size(status, vmath.vector3(panel_width - PANEL_PADDING * 2, 96, 0))
         nodes[#nodes + 1] = status
         self.join_status_node = status
 
-        local log_text = new_label(self, "", vmath.vector3(panel_left, panel_top - 108, 0), TEXT_COLOR, gui.PIVOT_NW)
+        local log_top = panel_top - 124
+        local log_height = panel_height - 196
+        local log_text = new_label(self, "", vmath.vector3(panel_left, log_top, 0), TEXT_COLOR, gui.PIVOT_NW)
         gui.set_line_break(log_text, true)
+        gui.set_size(log_text, vmath.vector3(panel_width - PANEL_PADDING * 2, log_height, 0))
         nodes[#nodes + 1] = log_text
         self.join_log_node = log_text
 

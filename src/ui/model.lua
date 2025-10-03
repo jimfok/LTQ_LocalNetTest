@@ -1,4 +1,4 @@
-local MAX_LOGS = 32
+local MAX_LOGS = 200
 
 local DEFAULT_STATES = { "splash", "menu", "create", "join" }
 

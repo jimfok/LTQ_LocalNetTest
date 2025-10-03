@@ -61,6 +61,8 @@ During the initial phase the simulation tools mirror the production Create Room 
 - Emit `TRACE|sim.client|discover|warn|mode=broadcast-only` when multicast setup fails so operators understand the CLI is running in degraded mode.
 - In broadcast-only mode the client sends both the simulator `HELLO` payload and the runtime-compatible `ping` message each cycle so existing Defold hosts reply without protocol changes.
 - Broadcast fallback also listens for Defold `pong` replies and treats them as discovery matches so discovery works without multicast.
+- Runtime console panes now allocate more space to log output (wider panels, taller text nodes) and cap history at 200 entries to keep on-screen context while still truncating excessive runs.
+- Set the environment variable `SIM_TOOLS_LOG_FILE` (or `sim_tools.log_file` in `game.project`) to capture console output to disk; use `default` to write to the save directory or provide an explicit absolute/relative path. Logs append with timestamped entries compatible with Bob/jar automation.
 - Create Room (runtime or simulator) must start its TCP listener when the host flow becomes ready and include a `tcp_port` field in every HELLO/PONG payload so join clients know where to complete the handshake.
 - Runtime builds must publish a routable local IP before broadcasting; when the device reports multiple aliases, prefer RFC1918 ranges (`192.168.*` → `10.*` → `172.16–31.*`) ahead of VPN or link-local addresses so remote peers can see the host.
 - Coordinate the self-test via shell scripts—run the room server harness and the join harness from terminals using the wrappers listed below. HUD interactions stay optional for manual observation only.
